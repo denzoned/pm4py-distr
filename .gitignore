@@ -105,3 +105,8 @@ venv.bak/
 
 .idea
 .idea/
+
+# slave parquet
+slave1
+slave2
+master.db
