@@ -419,11 +419,21 @@ def get_numeric_attribute_values():
     return jsonify({})
 
 @MasterSocketListener.app.route("/getRunningProcesses", methods=["GET"])
-def getOS():
+def getRunningProcesses():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.getRunningProcesses()
         return jsonify({"processes": points})
+
+    return jsonify({})
+
+@MasterSocketListener.app.route("/getOS", methods=["GET"])
+def getOS():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.getOS()
+        return jsonify({"OS": points})
 
     return jsonify({})

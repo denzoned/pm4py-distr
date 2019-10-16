@@ -30,6 +30,7 @@ from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4py.util import points_subset
 import psutil
+from sys import platform as _platform
 
 class Master:
     def __init__(self, parameters):
@@ -585,3 +586,15 @@ class Master:
         cpu_count = 0
         infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
         return infor
+
+    def getOS(self):
+        operatingsystem = ""
+        if _platform == "linux" or _platform == "linux2":
+            operatingsystem ="linux"
+        elif _platform == "darwin":
+            operatingsystem = "MAC OS X"
+        elif _platform == "win32":
+            operatingsystem = "Windows 32bit"
+        elif _platform == "win64":
+            operatingsystem = "Windows 64bit"
+        return operatingsystem
