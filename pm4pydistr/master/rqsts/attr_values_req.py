@@ -2,7 +2,6 @@ from pm4pydistr.master.rqsts.basic_request import BasicMasterRequest
 from pm4pydistr.configuration import KEYPHRASE
 import requests
 import json
-from pm4py.objects.log.util import xes
 
 
 class AttrValuesRequest(BasicMasterRequest):

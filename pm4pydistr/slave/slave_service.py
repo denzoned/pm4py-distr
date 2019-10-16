@@ -535,3 +535,14 @@ def get_numeric_attribute_values():
         return jsonify({"points": returned_list})
 
     return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getcurrentPIDinfo", methods=["GET"])
+def get_current_PID_info():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_current_PID_info()
+        return jsonify({"CPUusage": points})
+
+    return jsonify({})

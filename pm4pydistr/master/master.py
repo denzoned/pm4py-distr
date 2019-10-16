@@ -582,12 +582,22 @@ class Master:
 
         return None
 
-    def getRunningProcesses(self):
+    def get_running_processes(self):
         cpu_count = 0
         infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
         return infor
 
-    def getOS(self):
+    def get_all_processes(self):
+        cpu_count = 0
+        for proc in psutil.process_iter():
+            name = " ".join(proc.cmdline())
+            if name.startswith("python3 launch.py "):
+                os.system("taskset -cp " + str(cpu_count) + " " + str(proc.pid))
+                os.system("renice -20 -p " + str(proc.pid))
+                cpu_count = cpu_count + 1
+        return cpu_count
+
+    def get_OS(self):
         operatingsystem = ""
         if _platform == "linux" or _platform == "linux2":
             operatingsystem ="linux"
@@ -598,3 +608,15 @@ class Master:
         elif _platform == "win64":
             operatingsystem = "Windows 64bit"
         return operatingsystem
+
+    def get_CPU_info(self):
+        cpulist = psutil.cpu_percent(interval=1, percpu=True)
+        return cpulist
+
+    def get_current_PID_info(self):
+        pid = os.getpid()
+        ppid = os.getppid()
+        p = psutil.Process(pid)
+        #if (p.cpu_percent(interval=1)<40):
+            #p.nice(10)
+        return pid

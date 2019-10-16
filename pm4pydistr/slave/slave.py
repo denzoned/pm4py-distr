@@ -11,6 +11,7 @@ import socket
 
 import os
 import shutil
+import psutil
 
 class Slave:
     def __init__(self, parameters):
@@ -63,3 +64,12 @@ class Slave:
     def enable_ping_of_master(self):
         self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port)
         self.ping_module.start()
+
+
+    def get_current_PID_info(self):
+        pid = os.getpid()
+        ppid = os.getppid()
+        p = psutil.Process(pid)
+        #if (p.cpu_percent(interval=1)<40):
+            #p.nice(10)
+        return pid
