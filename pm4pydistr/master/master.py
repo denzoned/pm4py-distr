@@ -29,7 +29,7 @@ from collections import Counter
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4py.util import points_subset
-
+import psutil
 
 class Master:
     def __init__(self, parameters):
@@ -580,3 +580,8 @@ class Master:
             thread.join()
 
         return None
+
+    def getRunningProcesses(self):
+        cpu_count = 0
+        infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
+        return infor
