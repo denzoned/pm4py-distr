@@ -438,12 +438,12 @@ def get_OS():
 
     return jsonify({})
 
-@MasterSocketListener.app.route("/getCPUinfo", methods=["GET"])
-def get_CPU_info():
+@MasterSocketListener.app.route("/getCPU", methods=["GET"])
+def get_CPU():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        points = MasterVariableContainer.master.get_CPU_info()
+        points = MasterVariableContainer.master.get_CPU()
         return jsonify({"CPUusage": points})
 
     return jsonify({})
@@ -458,12 +458,22 @@ def get_current_PID_info():
 
     return jsonify({})
 
-@MasterSocketListener.app.route("/getallprocesses", methods=["GET"])
+@MasterSocketListener.app.route("/getAllProcesses", methods=["GET"])
 def get_all_processes():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.get_all_processes()
         return jsonify({"CPUusage": points})
+
+    return jsonify({})
+
+@MasterSocketListener.app.route('/shutdown', methods=["GET"])
+def shutdown():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.shutdown_server()
+        return 'Server shutting down...'
 
     return jsonify({})

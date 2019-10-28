@@ -588,14 +588,7 @@ class Master:
         return infor
 
     def get_all_processes(self):
-        cpu_count = 0
-        for proc in psutil.process_iter():
-            name = " ".join(proc.cmdline())
-            if name.startswith("python3 launch.py "):
-                os.system("taskset -cp " + str(cpu_count) + " " + str(proc.pid))
-                os.system("renice -20 -p " + str(proc.pid))
-                cpu_count = cpu_count + 1
-        return cpu_count
+        return psutil.cpu_stats()
 
     def get_OS(self):
         operatingsystem = ""
@@ -609,7 +602,7 @@ class Master:
             operatingsystem = "Windows 64bit"
         return operatingsystem
 
-    def get_CPU_info(self):
+    def get_CPU(self):
         cpulist = psutil.cpu_percent(interval=1, percpu=True)
         return cpulist
 
@@ -617,6 +610,9 @@ class Master:
         pid = os.getpid()
         ppid = os.getppid()
         p = psutil.Process(pid)
-        #if (p.cpu_percent(interval=1)<40):
-            #p.nice(10)
         return pid
+
+    def shutdown_server(self):
+        empty = ""
+        werkzeug.server.shutdown
+        return empty

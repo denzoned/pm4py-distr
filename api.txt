@@ -1,5 +1,10 @@
 These API refers to calls to MASTER.
 
+keyphrase is "hello"
+
+
+All calls are CASE Sensitive!!!
+
 TECHNICAL API:
 
 /doLogAssignment?keyphrase=KEYPHRASE
@@ -15,6 +20,31 @@ Get the (current) list of slaves registered to the service
 /getSublogsId?keyphrase=KEYPHRASE
 
 Get the list of distributed datasets managed by the master
+
+
+Newly added API calls:
+
+/getOS?keyphrase=KEYPHRASE
+
+Get the OS that the engine is running on
+
+
+/5001/getRunningProcesses?KEYPHRASE=keyphrase
+
+Get all current running Python tasks/processes
+
+
+/getCPU?keyphrase=KEYPHRASE
+
+Get CPU info of all threads in percentage
+
+
+/getcurrentPIDinfo?KEYPHRASE=keyphrase
+
+Get PID of current master/slave
+
+
+
 
 
 PROCESS MINING API:
