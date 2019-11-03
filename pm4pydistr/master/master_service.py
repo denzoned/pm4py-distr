@@ -467,13 +467,3 @@ def get_all_processes():
         return jsonify({"CPUusage": points})
 
     return jsonify({})
-
-@MasterSocketListener.app.route('/shutdown', methods=["GET"])
-def shutdown():
-    keyphrase = request.args.get('keyphrase', type=str)
-
-    if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.shutdown_server()
-        return 'Server shutting down...'
-
-    return jsonify({})
