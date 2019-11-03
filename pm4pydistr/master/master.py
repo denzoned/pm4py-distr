@@ -31,6 +31,8 @@ from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4py.util import points_subset
 import psutil
 from sys import platform as _platform
+import werkzeug
+
 
 class Master:
     def __init__(self, parameters):
@@ -70,13 +72,13 @@ class Master:
                         if name in all_logs:
                             id = all_logs[name]
                         else:
-                            id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
-                  randrange(0, 10), randrange(0, 10)]
+                            id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
+                                  randrange(0, 10),
+                                  randrange(0, 10), randrange(0, 10)]
                             MasterVariableContainer.dbmanager.insert_log_into_db(name, id)
                         self.sublogs_id[folder][name] = id
 
         MasterVariableContainer.first_loading_done = True
-
 
     def do_assignment(self):
         if not MasterVariableContainer.log_assignment_done:
@@ -91,8 +93,9 @@ class Master:
                     self.sublogs_correspondence[str(slave)][folder] = []
 
                 for log in all_logs:
-
-                    distances = sorted([(x, np.linalg.norm(np.array(x) - np.array(self.sublogs_id[folder][log])), self.slaves[str(x)]) for x in all_slaves], key=lambda x: (x[1], x[2]))
+                    distances = sorted(
+                        [(x, np.linalg.norm(np.array(x) - np.array(self.sublogs_id[folder][log])), self.slaves[str(x)])
+                         for x in all_slaves], key=lambda x: (x[1], x[2]))
 
                     self.sublogs_correspondence[str(distances[0][0])][folder].append(log)
 
@@ -123,7 +126,6 @@ class Master:
 
             MasterVariableContainer.slave_loading_requested = True
 
-
     def set_filter(self, session, process, data, use_transition, no_samples):
         all_slaves = list(self.slaves.keys())
 
@@ -131,7 +133,8 @@ class Master:
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
 
-            m = FilterRequest(session, slave_host, slave_port, use_transition, no_samples, {"process": process, "data": data})
+            m = FilterRequest(session, slave_host, slave_port, use_transition, no_samples,
+                              {"process": process, "data": data})
             m.start()
 
     def calculate_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -182,7 +185,8 @@ class Master:
 
         return overall_dfg
 
-    def calculate_composite_obj(self, session, process, use_transition, no_samples, attribute_key, performance_required=False):
+    def calculate_composite_obj(self, session, process, use_transition, no_samples, attribute_key,
+                                performance_required=False):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -214,11 +218,15 @@ class Master:
             overall_obj["events"] = overall_obj["events"] + thread.content['obj']["events"]
             overall_obj["cases"] = overall_obj["cases"] + thread.content['obj']["cases"]
             overall_obj["activities"] = overall_obj["activities"] + Counter(thread.content['obj']["activities"])
-            overall_obj["start_activities"] = overall_obj["start_activities"] + Counter(thread.content['obj']["start_activities"])
-            overall_obj["end_activities"] = overall_obj["end_activities"] + Counter(thread.content['obj']["end_activities"])
-            overall_obj["frequency_dfg"] = overall_obj["frequency_dfg"] + Counter(thread.content['obj']["frequency_dfg"])
+            overall_obj["start_activities"] = overall_obj["start_activities"] + Counter(
+                thread.content['obj']["start_activities"])
+            overall_obj["end_activities"] = overall_obj["end_activities"] + Counter(
+                thread.content['obj']["end_activities"])
+            overall_obj["frequency_dfg"] = overall_obj["frequency_dfg"] + Counter(
+                thread.content['obj']["frequency_dfg"])
             if performance_required:
-                overall_obj["performance_dfg"] = overall_obj["performance_dfg"] + Counter(thread.content['obj']["performance_dfg"])
+                overall_obj["performance_dfg"] = overall_obj["performance_dfg"] + Counter(
+                    thread.content['obj']["performance_dfg"])
 
         overall_obj["activities"] = dict(overall_obj["activities"])
         overall_obj["start_activities"] = dict(overall_obj["start_activities"])
@@ -252,7 +260,6 @@ class Master:
 
         return overall_ea
 
-
     def get_start_activities(self, session, process, use_transition, no_samples):
         all_slaves = list(self.slaves.keys())
 
@@ -275,7 +282,6 @@ class Master:
             overall_sa = overall_sa + Counter(thread.content['start_activities'])
 
         return overall_sa
-
 
     def get_attribute_values(self, session, process, use_transition, no_samples, attribute_key):
         all_slaves = list(self.slaves.keys())
@@ -378,7 +384,11 @@ class Master:
                 if not variant in dictio_variants:
                     dictio_variants[variant] = d_variants[variant]
                 else:
-                    dictio_variants[variant]["caseDuration"] = (dictio_variants[variant]["caseDuration"] * dictio_variants[variant]["count"] + d_variants[variant]["caseDuration"] * d_variants[variant]["count"])/(dictio_variants[variant]["count"] + d_variants[variant]["count"])
+                    dictio_variants[variant]["caseDuration"] = (dictio_variants[variant]["caseDuration"] *
+                                                                dictio_variants[variant]["count"] + d_variants[variant][
+                                                                    "caseDuration"] * d_variants[variant]["count"]) / (
+                                                                           dictio_variants[variant]["count"] +
+                                                                           d_variants[variant]["count"])
                     dictio_variants[variant]["count"] = dictio_variants[variant]["count"] + d_variants[variant]["count"]
 
             list_variants = sorted(list(dictio_variants.values()), key=lambda x: x["count"], reverse=True)
@@ -447,8 +457,8 @@ class Master:
 
         return events
 
-
-    def get_events_per_dotted(self, session, process, use_transition, no_samples, attribute1, attribute2, attribute3, max_ret_items=10000):
+    def get_events_per_dotted(self, session, process, use_transition, no_samples, attribute1, attribute2, attribute3,
+                              max_ret_items=10000):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -473,7 +483,6 @@ class Master:
             thread.join()
 
             return thread.content
-
 
     def get_events_per_time(self, session, process, use_transition, no_samples, max_ret_items=100000):
         all_slaves = list(self.slaves.keys())
@@ -503,7 +512,6 @@ class Master:
 
         return points
 
-
     def get_case_duration(self, session, process, use_transition, no_samples, max_ret_items=100000):
         all_slaves = list(self.slaves.keys())
 
@@ -532,7 +540,8 @@ class Master:
 
         return points
 
-    def get_numeric_attribute_values(self, session, process, use_transition, no_samples, attribute_key, max_ret_items=100000):
+    def get_numeric_attribute_values(self, session, process, use_transition, no_samples, attribute_key,
+                                     max_ret_items=100000):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -560,7 +569,6 @@ class Master:
             points = points_subset.pick_chosen_points_list(max_ret_items, points)
 
         return points
-
 
     def do_caching(self, session, process, use_transition, no_samples):
         all_slaves = list(self.slaves.keys())
@@ -593,7 +601,7 @@ class Master:
     def get_OS(self):
         operatingsystem = ""
         if _platform == "linux" or _platform == "linux2":
-            operatingsystem ="linux"
+            operatingsystem = "linux"
         elif _platform == "darwin":
             operatingsystem = "MAC OS X"
         elif _platform == "win32":
@@ -612,7 +620,3 @@ class Master:
         p = psutil.Process(pid)
         return pid
 
-    def shutdown_server(self):
-        empty = ""
-        werkzeug.server.shutdown
-        return empty
