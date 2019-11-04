@@ -595,8 +595,6 @@ class Master:
         infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
         return infor
 
-    def get_all_processes(self):
-        return psutil.cpu_stats()
 
     def get_OS(self):
         operatingsystem = ""
@@ -604,10 +602,8 @@ class Master:
             operatingsystem = "linux"
         elif _platform == "darwin":
             operatingsystem = "MAC OS X"
-        elif _platform == "win32":
-            operatingsystem = "Windows 32bit"
-        elif _platform == "win64":
-            operatingsystem = "Windows 64bit"
+        elif _platform == "win32" or _platform == "win64":
+            operatingsystem = "Windows"
         return operatingsystem
 
     def get_CPU(self):
@@ -620,3 +616,6 @@ class Master:
         p = psutil.Process(pid)
         return pid
 
+    def get_memory(self):
+        mem = psutil.virtual_memory()
+        return mem

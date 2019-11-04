@@ -31,7 +31,7 @@ Get the OS that the engine is running on
 
 /5001/getRunningProcesses?KEYPHRASE=keyphrase
 
-Get all current running Python tasks/processes
+Get all current running Python tasks/processes(master and slaves) with PID
 
 
 /getCPU?keyphrase=KEYPHRASE
@@ -43,6 +43,11 @@ Get CPU info of all threads in percentage
 
 Get PID of current master/slave
 
+
+/getMemory?KEYPHRASE=keyphrase
+
+Get Memory info in following order(Windows)
+total, available, percent(used), used, free/available
 
 
 

@@ -454,16 +454,16 @@ def get_current_PID_info():
 
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.get_current_PID_info()
-        return jsonify({"CPUusage": points})
+        return jsonify({"PID": points})
 
     return jsonify({})
 
-@MasterSocketListener.app.route("/getAllProcesses", methods=["GET"])
-def get_all_processes():
+@MasterSocketListener.app.route("/getMemory", methods=["GET"])
+def get_memory():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        points = MasterVariableContainer.master.get_all_processes()
-        return jsonify({"CPUusage": points})
+        points = MasterVariableContainer.master.get_memory()
+        return jsonify({"Memory": points})
 
     return jsonify({})
