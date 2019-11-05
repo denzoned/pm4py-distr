@@ -21,6 +21,7 @@ from pm4pydistr.master.rqsts.events_per_time_request import EventsPerTimeRequest
 from pm4pydistr.master.rqsts.case_duration_request import CaseDurationRequest
 from pm4pydistr.master.rqsts.numeric_attribute_request import NumericAttributeRequest
 from pm4pydistr.master.rqsts.caching_request import CachingRequest
+from pm4pydistr.configuration import KEYPHRASE
 from pathlib import Path
 from random import randrange
 import os
@@ -31,8 +32,7 @@ from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4py.util import points_subset
 import psutil
 from sys import platform as _platform
-import werkzeug
-
+import requests
 
 class Master:
     def __init__(self, parameters):
@@ -619,3 +619,24 @@ class Master:
     def get_memory(self):
         mem = psutil.virtual_memory()
         return mem
+
+    def get_slaves_list2(self):
+        #pid = os.getpid()
+        #if not MasterVariableContainer.slave_loading_requested:
+            all_slaves = list(self.slaves.keys())
+            w, h = len(all_slaves), 4;
+            temporary = [[0 for x in range(h)] for y in range(w)]
+
+            i = 0
+            for slave in all_slaves:
+
+                slave_host = self.slaves[slave][1]
+                slave_port = str(self.slaves[slave][2])
+
+                uri = "http://" + slave_host + ":" + slave_port + "/getcurrentPIDinfo?keyphrase=" + KEYPHRASE
+                r = requests.get(uri)
+                dictionary = r.json()
+                temporary[i] = MasterVariableContainer.master.slaves[slave]
+                temporary[i][3] = (dictionary["PID"])
+                i = i + 1
+            return repr(temporary)

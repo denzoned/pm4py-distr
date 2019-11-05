@@ -543,6 +543,6 @@ def get_current_PID_info():
 
     if keyphrase == configuration.KEYPHRASE:
         points = SlaveVariableContainer.slave.get_current_PID_info()
-        return jsonify({"CPUusage": points})
+        return jsonify({"PID": points})
 
     return jsonify({})

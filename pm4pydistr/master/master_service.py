@@ -467,3 +467,13 @@ def get_memory():
         return jsonify({"Memory": points})
 
     return jsonify({})
+
+@MasterSocketListener.app.route("/getSlavesList2", methods=["GET"])
+def get_slaves_list2():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_slaves_list2()
+        return jsonify({"Slaves": points})
+
+    return jsonify({})
