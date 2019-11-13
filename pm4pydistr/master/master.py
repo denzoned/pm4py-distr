@@ -623,20 +623,25 @@ class Master:
     def get_slaves_list2(self):
         #pid = os.getpid()
         #if not MasterVariableContainer.slave_loading_requested:
-            all_slaves = list(self.slaves.keys())
-            w, h = len(all_slaves), 4;
-            temporary = [[0 for x in range(h)] for y in range(w)]
+        all_slaves = list(self.slaves.keys())
+        #w, h = len(all_slaves), 5
+        #temporary = [[0 for x in range(h)] for y in range(w)]
+        #temporary = {}
 
-            i = 0
-            for slave in all_slaves:
+        temporary = MasterVariableContainer.master.slaves
+        i = 0
+        for slave in all_slaves:
 
-                slave_host = self.slaves[slave][1]
-                slave_port = str(self.slaves[slave][2])
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
 
-                uri = "http://" + slave_host + ":" + slave_port + "/getcurrentPIDinfo?keyphrase=" + KEYPHRASE
-                r = requests.get(uri)
-                dictionary = r.json()
-                temporary[i] = MasterVariableContainer.master.slaves[slave]
-                temporary[i][3] = (dictionary["PID"])
-                i = i + 1
-            return repr(temporary)
+            uri = "http://" + slave_host + ":" + slave_port + "/getcurrentPIDinfo?keyphrase=" + KEYPHRASE
+            r = requests.get(uri)
+            #temporary = r.json()
+
+
+            #dictionary = r.json()
+            #temporary[i] = MasterVariableContainer.master.slaves[slave]
+            #temporary[i][4] = (dictionary["PID"])
+            #i = i + 1
+        return temporary

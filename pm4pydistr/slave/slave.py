@@ -30,6 +30,7 @@ class Slave:
             #self.master_host = str(ip)
         self.id = None
         self.ping_module = None
+        self.pid = None
 
         self.filters = {}
 
@@ -62,14 +63,15 @@ class Slave:
                         shutil.copyfile(list_paths_corr[log_name], os.path.join(self.conf, folder_name, log_name))
 
     def enable_ping_of_master(self):
-        self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port)
+        self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port, self.pid)
         self.ping_module.start()
 
 
     def get_current_PID_info(self):
+        self.pid = os.getpid()
         pid = os.getpid()
-        ppid = os.getppid()
+        #ppid = os.getppid()
         p = psutil.Process(pid)
         #if (p.cpu_percent(interval=1)<40):
             #p.nice(10)
-        return pid
+        return repr(p.pid)

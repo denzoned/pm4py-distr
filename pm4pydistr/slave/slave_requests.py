@@ -14,6 +14,7 @@ class SlaveRequests:
         self.master_port = master_port
         self.conf = conf
         self.id = None
+        self.pid = None
 
     def register_to_webservice(self):
         r = requests.get(
@@ -22,5 +23,11 @@ class SlaveRequests:
         response = json.loads(r.text)
         self.id = response['id']
         self.slave.id = response['id']
+
+        r2 = requests.get(
+            "http://" + self.host + ":" + self.port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
+
+        response = json.loads(r2.text)
+        self.slave.pid = response['PID']
 
         self.slave.enable_ping_of_master()
