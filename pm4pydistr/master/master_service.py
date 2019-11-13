@@ -11,7 +11,7 @@ from pm4pydistr.master.variable_container import MasterVariableContainer
 from pm4pydistr.master.db_manager import DbManager
 from pm4py.objects.log.util import xes
 
-import logging, json
+import logging, json, requests
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -43,7 +43,11 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time()]
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1]
+        r2 = requests.get(
+            "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
+        response = json.loads(r2.text)
+        MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
         return jsonify({"id": str(id)})
 
 
@@ -56,7 +60,7 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time()]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1]
         return jsonify({"id": id})
 
 

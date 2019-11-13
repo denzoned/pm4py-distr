@@ -75,3 +75,7 @@ class Slave:
         #if (p.cpu_percent(interval=1)<40):
             #p.nice(10)
         return repr(p.pid)
+
+    def get_memory(self):
+        mem = psutil.virtual_memory()
+        return mem

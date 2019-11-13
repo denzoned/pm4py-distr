@@ -546,3 +546,13 @@ def get_current_PID_info():
         return jsonify({"PID": points})
 
     return jsonify({})
+
+@SlaveSocketListener.app.route("/getMemory", methods=["GET"])
+def get_memory():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_memory()
+        return jsonify({"Memory": points})
+
+    return jsonify({})

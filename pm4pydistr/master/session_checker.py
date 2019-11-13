@@ -13,7 +13,7 @@ class SessionChecker(Thread):
             time.sleep(SLEEPING_TIME)
 
             for slave in self.master.slaves:
-                slave_time = self.master.slaves[slave][-1]
+                slave_time = self.master.slaves[slave][3]
 
                 if (time.time() - slave_time) > SESSION_EXPIRATION:
                     #print("expired slave ", slave, self.master.slaves[slave])
