@@ -44,10 +44,14 @@ def register_slave():
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
         MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1]
-        r2 = requests.get(
+        try:
+            r2 = requests.get(
             "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
-        response = json.loads(r2.text)
-        MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
+            response = json.loads(r2.text)
+            MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
+        except:
+            del MasterVariableContainer.master.slaves[str(id)]
+            return "Error while registering Slave"
         return jsonify({"id": str(id)})
 
 
