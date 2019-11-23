@@ -105,9 +105,3 @@ venv.bak/
 
 .idea
 .idea/
-
-# slave parquet master
-slave1
-slave2
-master.db
-master
