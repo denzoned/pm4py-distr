@@ -101,6 +101,16 @@ class Master:
 
             MasterVariableContainer.log_assignment_done = True
 
+    def check_slaves(self):
+        all_slaves = list([eval(x) for x in self.slaves.keys()])
+
+        for slave in all_slaves:
+
+            if slave.get_current_PID_info() != slave :
+                MasterVariableContainer.log_assignment_done = False
+
+
+
     def make_slaves_load(self):
         if not MasterVariableContainer.slave_loading_requested:
             all_slaves = list(self.slaves.keys())

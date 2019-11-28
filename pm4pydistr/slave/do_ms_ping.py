@@ -19,4 +19,5 @@ class DoMasterPing(Thread):
             uri = "http://"+self.master_host+":"+self.master_port+"/pingFromSlave?id="+str(self.id)+"&conf="+str(self.conf)+"&keyphrase="+configuration.KEYPHRASE
             r = requests.get(uri)
             #print("done ping request")
+            #thread sleeps for configuration.SLEEPING_TIME = 30 secs after a request
             time.sleep(configuration.SLEEPING_TIME)

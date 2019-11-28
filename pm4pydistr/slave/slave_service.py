@@ -36,7 +36,7 @@ class SlaveSocketListener(Thread):
         self.app.run(host="0.0.0.0", port=SlaveVariableContainer.port, threaded=True)
 
 
-@SlaveSocketListener.app.route("/synchronizeFiles", methods=["POST"])
+@SlaveSocketListener.app.route("/synchronizeFiles", methods=["POST", "GET"])
 def synchronize_files():
     keyphrase = request.args.get('keyphrase', type=str)
     if keyphrase == configuration.KEYPHRASE:

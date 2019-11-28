@@ -75,7 +75,12 @@ def ping_from_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id][3] = time()
+        try:
+            MasterVariableContainer.master.slaves[id][3] = time()
+        except:
+            del MasterVariableContainer.master.slaves[id]
+            return "Error while pinging slave"
+
         return jsonify({"id": id})
 
 
@@ -96,6 +101,7 @@ def do_log_assignment():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
+        #MasterVariableContainer.master.check_slaves()
         MasterVariableContainer.master.do_assignment()
         MasterVariableContainer.master.make_slaves_load()
 
@@ -110,6 +116,13 @@ def get_slaves_list():
         return jsonify({"slaves": MasterVariableContainer.master.slaves})
     return jsonify({})
 
+@MasterSocketListener.app.route("/getSlavesList2", methods=["GET"])
+def get_slaves_list2():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        return str(MasterVariableContainer.master.slaves.keys())
+    return jsonify({})
 
 @MasterSocketListener.app.route("/getSublogsId", methods=["GET"])
 def get_sublogs_id():
@@ -473,15 +486,5 @@ def get_memory():
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.get_memory()
         return jsonify({"Memory": points})
-
-    return jsonify({})
-
-@MasterSocketListener.app.route("/getSlavesList2", methods=["GET"])
-def get_slaves_list2():
-    keyphrase = request.args.get('keyphrase', type=str)
-
-    if keyphrase == configuration.KEYPHRASE:
-        points = MasterVariableContainer.master.get_slaves_list2()
-        return jsonify({"Slaves": points})
 
     return jsonify({})
