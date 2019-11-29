@@ -101,9 +101,18 @@ def do_log_assignment():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        #MasterVariableContainer.master.check_slaves()
+        MasterVariableContainer.master.check_slaves()
         MasterVariableContainer.master.do_assignment()
         MasterVariableContainer.master.make_slaves_load()
+
+    return jsonify({})
+
+@MasterSocketListener.app.route("/checkSlaves", methods=["GET"])
+def check_slaves():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.check_slaves()
 
     return jsonify({})
 

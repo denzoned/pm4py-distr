@@ -31,3 +31,11 @@ class SlaveRequests:
         self.slave.pid = response['PID']
 
         self.slave.enable_ping_of_master()
+
+    def get_pid(self):
+        r = requests.get(
+            "http://" + self.host + ":" + self.port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
+
+        response = json.load(r.text)
+        response = response['PID']
+        return response

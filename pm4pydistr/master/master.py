@@ -102,13 +102,21 @@ class Master:
             MasterVariableContainer.log_assignment_done = True
 
     def check_slaves(self):
-        all_slaves = list([eval(x) for x in self.slaves.keys()])
+        all_slaves = list(self.slaves.keys())
 
         for slave in all_slaves:
-
-            if slave.get_current_PID_info() != slave :
+            check = False
+            #if slave.get_current_PID_info() != slave:
+            #    MasterVariableContainer.log_assignment_done = False
+            PID1 = str(self.slaves[slave][4])
+            #return PID1
+            for pid2 in self.get_running_processes():
+                #return str(pid2["pid"])
+                if str(PID1) == str(pid2["pid"]):
+                    check = True
+            if not check:
+                del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
-
 
 
     def make_slaves_load(self):
