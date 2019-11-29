@@ -114,9 +114,10 @@ class Master:
                 #return str(pid2["pid"])
                 if str(PID1) == str(pid2["pid"]):
                     check = True
-            if not check:
+            if check == False:
                 del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
+                MasterVariableContainer.slave_loading_requested = False
 
 
     def make_slaves_load(self):

@@ -38,6 +38,8 @@ def register_slave():
     ip = request.args.get('ip', type=str)
     port = request.args.get('port', type=str)
     conf = request.args.get('conf', type=str)
+    MasterVariableContainer.log_assignment_done = False
+    MasterVariableContainer.slave_loading_requested = False
 
     if keyphrase == configuration.KEYPHRASE:
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
