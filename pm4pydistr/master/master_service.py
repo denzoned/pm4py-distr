@@ -509,3 +509,13 @@ def get_temp():
         return jsonify({"Temperature": points})
 
     return jsonify({})
+
+@MasterSocketListener.app.route("/getDiskUsage", methods=["GET"])
+def get_diskusage():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_disk_usage()
+        return jsonify({"Disk Usage": points})
+
+    return jsonify({})

@@ -101,3 +101,7 @@ class Slave:
                     temp.update({sensor.Name: sensor.Value})
                 #temp.update({sensor.Name: sensor.Value})
         return temp
+
+    def get_disk_usage(self):
+        disk = psutil.disk_usage('/')
+        return disk

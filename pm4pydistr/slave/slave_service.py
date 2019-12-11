@@ -576,3 +576,13 @@ def get_temp():
         return jsonify({"Temperature": points})
 
     return jsonify({})
+
+@SlaveSocketListener.app.route("/getDiskUsage", methods=["GET"])
+def get_diskusage():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_disk_usage()
+        return jsonify({"Disk Usage": points})
+
+    return jsonify({})

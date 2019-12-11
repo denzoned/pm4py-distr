@@ -641,6 +641,10 @@ class Master:
         mem = psutil.virtual_memory()
         return mem
 
+    def get_disk_usage(self):
+        disk = psutil.disk_usage('/')
+        return disk
+
     def get_temperature(self):
         pythoncom.CoInitialize()
         #w = wmi.WMI(namespace="root\\wmi")
