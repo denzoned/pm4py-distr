@@ -639,6 +639,11 @@ class Master:
         mem = psutil.virtual_memory()
         return mem
 
+    def get_temperature(self):
+
+        return None
+
+
     def get_slaves_list2(self):
         #pid = os.getpid()
         #if not MasterVariableContainer.slave_loading_requested:

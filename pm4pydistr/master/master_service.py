@@ -499,3 +499,13 @@ def get_memory():
         return jsonify({"Memory": points})
 
     return jsonify({})
+
+@MasterSocketListener.app.route("/getTemperature", methods=["GET"])
+def get_temp():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_temperature()
+        return jsonify({"Temperature": points})
+
+    return jsonify({})

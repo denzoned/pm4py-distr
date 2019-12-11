@@ -79,3 +79,7 @@ class Slave:
     def get_memory(self):
         mem = psutil.virtual_memory()
         return mem
+
+    def get_CPU(self):
+        cpulist = psutil.cpu_percent(interval=1, percpu=True)
+        return cpulist

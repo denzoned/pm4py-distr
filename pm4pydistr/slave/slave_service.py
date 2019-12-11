@@ -556,3 +556,13 @@ def get_memory():
         return jsonify({"Memory": points})
 
     return jsonify({})
+
+@SlaveSocketListener.app.route("/getCPU", methods=["GET"])
+def get_CPU():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_CPU()
+        return jsonify({"Memory": points})
+
+    return jsonify({})

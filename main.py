@@ -19,3 +19,5 @@ t2 = ExecutionThread(PYTHON_PATH+" launch.py --type slave --conf slave1 --port 5
 t2.start()
 t3 = ExecutionThread(PYTHON_PATH+" launch.py --type slave --conf slave2 --port 5003 --master-host 127.0.0.1 --master-port 5001")
 t3.start()
+t4 = ExecutionThread(PYTHON_PATH+" launch.py --type slave --conf slave3 --port 5004 --master-host 127.0.0.1 --master-port 5001")
+t4.start()
