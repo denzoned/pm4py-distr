@@ -8,7 +8,8 @@ from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4pydistr.slave.do_ms_ping import DoMasterPing
 import uuid
 import socket
-
+import pythoncom
+import wmi
 import os
 import shutil
 import psutil
@@ -83,3 +84,20 @@ class Slave:
     def get_CPU(self):
         cpulist = psutil.cpu_percent(interval=1, percpu=True)
         return cpulist
+
+    def get_temperature(self):
+        pythoncom.CoInitialize()
+        #w = wmi.WMI(namespace="root\\wmi")
+        #temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+        #return temperature_info.CurrentTemperature
+        #return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+        w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
+        temperature_infos = w.Sensor()
+        temp = {}
+        #return temperature_infos
+        for sensor in temperature_infos:
+            if sensor.SensorType == u'Temperature':
+                if sensor.Name == 'CPU Package':
+                    temp.update({sensor.Name: sensor.Value})
+                #temp.update({sensor.Name: sensor.Value})
+        return temp

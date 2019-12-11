@@ -25,6 +25,8 @@ from pm4pydistr.configuration import KEYPHRASE
 from pathlib import Path
 from random import randrange
 import os
+import wmi
+import pythoncom
 import numpy as np
 from collections import Counter
 from pm4pydistr.master.session_checker import SessionChecker
@@ -640,9 +642,21 @@ class Master:
         return mem
 
     def get_temperature(self):
-
-        return None
-
+        pythoncom.CoInitialize()
+        #w = wmi.WMI(namespace="root\\wmi")
+        #temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+        #return temperature_info.CurrentTemperature
+        #return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+        w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
+        temperature_infos = w.Sensor()
+        temp = {}
+        #return temperature_infos
+        for sensor in temperature_infos:
+            if sensor.SensorType == u'Temperature':
+                if sensor.Name == 'CPU Package':
+                    temp.update({sensor.Name: sensor.Value})
+                #temp.update({sensor.Name: sensor.Value})
+        return temp
 
     def get_slaves_list2(self):
         #pid = os.getpid()
