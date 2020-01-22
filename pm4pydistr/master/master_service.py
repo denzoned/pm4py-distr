@@ -4,12 +4,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from random import randrange
 from time import time
+from datetime import datetime
 from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
 from pm4pydistr.configuration import PARAMETER_NO_SAMPLES, DEFAULT_MAX_NO_SAMPLES
 from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS, DEFAULT_MAX_NO_RET_ITEMS
 from pm4pydistr.master.variable_container import MasterVariableContainer
 from pm4pydistr.master.db_manager import DbManager
 from pm4py.objects.log.util import xes
+from pythonping import ping
 
 import logging, json, requests
 
@@ -45,7 +47,7 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1]
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1]
         try:
             r2 = requests.get(
             "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
@@ -66,19 +68,29 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1]
         return jsonify({"id": id})
 
 
 @MasterSocketListener.app.route("/pingFromSlave", methods=["GET"])
 def ping_from_slave():
+    received_time = int(round(time() * 1000))
     keyphrase = request.args.get('keyphrase', type=str)
     id = request.args.get('id', type=str)
+    port = request.args.get('port', type=str)
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
         try:
+            #pingadrr = str(ip) + ':' + str(port)
+            #response_list = ping('8.8.8.8', size=40, count=10)
+            #pinged = response_list.rtt_avg_ms
             MasterVariableContainer.master.slaves[id][3] = time()
+            #MasterVariableContainer.master.slaves[id][7] = pinged
+            r2 = requests.get(
+                 "http://" + MasterVariableContainer.master.host + ":" + str(MasterVariableContainer.master.slaves[id][2]) + "/getMemory?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r2.text)
+            MasterVariableContainer.master.slaves[str(id)][5] = response['Memory']
         except:
             del MasterVariableContainer.master.slaves[id]
             return "Error while pinging slave"

@@ -628,7 +628,7 @@ class Master:
         return operatingsystem
 
     def get_CPU(self):
-        cpulist = psutil.cpu_percent(interval=1, percpu=True)
+        cpulist = psutil.cpu_percent(interval=1, percpu=False)
         return cpulist
 
     def get_current_PID_info(self):
@@ -644,6 +644,9 @@ class Master:
     def get_disk_usage(self):
         disk = psutil.disk_usage('/')
         return disk
+
+    def get_netusage(self):
+        net = psutil.net_connections()
 
     def get_temperature(self):
         pythoncom.CoInitialize()

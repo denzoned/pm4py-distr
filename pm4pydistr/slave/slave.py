@@ -13,6 +13,8 @@ import wmi
 import os
 import shutil
 import psutil
+from pythonping import ping
+from time import time
 
 class Slave:
     def __init__(self, parameters):
@@ -32,6 +34,9 @@ class Slave:
         self.id = None
         self.ping_module = None
         self.pid = None
+        self.memory = None
+        self.CPU = None
+        self.ping = None
 
         self.filters = {}
 
@@ -64,7 +69,7 @@ class Slave:
                         shutil.copyfile(list_paths_corr[log_name], os.path.join(self.conf, folder_name, log_name))
 
     def enable_ping_of_master(self):
-        self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port, self.pid)
+        self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port, self.pid, self.host, self.port)
         self.ping_module.start()
 
 
@@ -105,3 +110,6 @@ class Slave:
     def get_disk_usage(self):
         disk = psutil.disk_usage('/')
         return disk
+
+    def get_networkping(self):
+        ping()
