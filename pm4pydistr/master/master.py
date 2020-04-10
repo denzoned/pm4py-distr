@@ -1,40 +1,43 @@
-from pm4pydistr.master.master_service import MasterSocketListener
-from pm4pydistr.master.variable_container import MasterVariableContainer
+import os
+from collections import Counter
+from pathlib import Path
+from random import randrange
+from sys import platform as _platform
 
-from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS
+import numpy as np
+import psutil
+import pythoncom
+import requests
+import wmi
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
-from pm4pydistr.master.rqsts.master_assign_request import MasterAssignRequest
+from pm4py.util import points_subset
+from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
+
+from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
+from pm4pydistr.configuration import KEYPHRASE
+from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS
+from pm4pydistr.master.master_service import MasterSocketListener
+from pm4pydistr.master.rqsts.attr_names_req import AttributesNamesRequest
+from pm4pydistr.master.rqsts.attr_values_req import AttrValuesRequest
+from pm4pydistr.master.rqsts.caching_request import CachingRequest
+from pm4pydistr.master.rqsts.case_duration_request import CaseDurationRequest
+from pm4pydistr.master.rqsts.cases_list import CasesListRequest
+from pm4pydistr.master.rqsts.comp_obj_calc_request import CompObjCalcRequest
 from pm4pydistr.master.rqsts.dfg_calc_request import DfgCalcRequest
 from pm4pydistr.master.rqsts.ea_request import EaRequest
-from pm4pydistr.master.rqsts.sa_request import SaRequest
-from pm4pydistr.master.rqsts.filter_request import FilterRequest
-from pm4pydistr.master.rqsts.attr_names_req import AttributesNamesRequest
-from pm4pydistr.master.rqsts.log_summ_request import LogSummaryRequest
-from pm4pydistr.master.rqsts.attr_values_req import AttrValuesRequest
-from pm4pydistr.master.rqsts.perf_dfg_calc_request import PerfDfgCalcRequest
-from pm4pydistr.master.rqsts.comp_obj_calc_request import CompObjCalcRequest
-from pm4pydistr.master.rqsts.variants import VariantsRequest
-from pm4pydistr.master.rqsts.cases_list import CasesListRequest
 from pm4pydistr.master.rqsts.events import EventsRequest
 from pm4pydistr.master.rqsts.events_dotted_request import EventsDottedRequest
 from pm4pydistr.master.rqsts.events_per_time_request import EventsPerTimeRequest
-from pm4pydistr.master.rqsts.case_duration_request import CaseDurationRequest
+from pm4pydistr.master.rqsts.filter_request import FilterRequest
+from pm4pydistr.master.rqsts.log_summ_request import LogSummaryRequest
+from pm4pydistr.master.rqsts.master_assign_request import MasterAssignRequest
 from pm4pydistr.master.rqsts.numeric_attribute_request import NumericAttributeRequest
-from pm4pydistr.master.rqsts.caching_request import CachingRequest
-from pm4pydistr.configuration import KEYPHRASE
-from pathlib import Path
-from random import randrange
-import os
-import wmi
-import pythoncom
-import numpy as np
-from collections import Counter
+from pm4pydistr.master.rqsts.perf_dfg_calc_request import PerfDfgCalcRequest
+from pm4pydistr.master.rqsts.sa_request import SaRequest
+from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
-from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
-from pm4py.util import points_subset
-import psutil
-from sys import platform as _platform
-import requests
+from pm4pydistr.master.variable_container import MasterVariableContainer
+
 
 class Master:
     def __init__(self, parameters):
@@ -690,3 +693,13 @@ class Master:
             #temporary[i][4] = (dictionary["PID"])
             #i = i + 1
         return temporary
+
+
+    def simple_imd(self, session, process, use_transition, no_samples, attribute):
+        #get DFG
+        r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
+        #r = requests.get(uri)
+        return str(r)
+
+        #apply DFG on IMD
+        #apply_dfg()
