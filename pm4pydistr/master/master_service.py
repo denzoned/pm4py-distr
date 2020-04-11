@@ -534,15 +534,32 @@ def get_diskusage():
 
 @MasterSocketListener.app.route("/simpleIMD", methods=["GET"])
 def simple_IMD():
-    process = request.args.get('process', type=str)
     keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
     session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
-    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
 
     if keyphrase == configuration.KEYPHRASE:
         discoverimdfb = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples, attribute_key)
         #return discoverimdfb
-        return jsonify({"Process tree": discoverimdfb})
+        return discoverimdfb
+    return jsonify({"Process Tree": {}})
+
+@MasterSocketListener.app.route("/distributedIMD", methods=["GET"])
+def distr_IMD():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        discoverimdfb = MasterVariableContainer.master.distr_imd(session, process, use_transition, no_samples, attribute_key)
+        #return discoverimdfb
+        return discoverimdfb
     return jsonify({"Process Tree": {}})

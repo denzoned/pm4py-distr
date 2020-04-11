@@ -3,6 +3,7 @@ from collections import Counter
 from pathlib import Path
 from random import randrange
 from sys import platform as _platform
+from flask import jsonify
 
 import numpy as np
 import psutil
@@ -699,7 +700,19 @@ class Master:
         #get DFG
         r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
         #r = requests.get(uri)
-        return str(r)
+        dfg = jsonify(r)
+        start = self.get_start_activities(session, process, use_transition, no_samples)
+        end = self.get_end_activities(session, process, use_transition, no_samples)
+        #apply_dfg(dict(r), None, False, start, end)
+
+        #return str(dfg)
+        return dict(r)
 
         #apply DFG on IMD
         #apply_dfg()
+
+    def distr_imd(self, session, process, use_transition, no_samples, attribute):
+        #get DFG
+        r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
+
+        return r
