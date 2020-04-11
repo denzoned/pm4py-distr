@@ -18,6 +18,16 @@ http://localhost:5001/doLogAssignment?keyphrase=hello
 
 http://localhost:5001/calculateDfg?keyphrase=hello&process=receipt
 
+3) USE INDUCTIVE MINER-DIRECT FOLLOWS BASED
+
+i)
+http://localhost:5001/distributedIMD?keyphrase=hello&process=receipt
+
+ii)
+For comparison without distributing the work
+
+http://localhost:5001/simpleIMD?keyphrase=hello&process=receipt
+
 ## Configuration of the keyphrase
 
 The keyphrase that is shared between the slaves and the master is contained in the pm4pydistr.configuration file.
@@ -35,6 +45,7 @@ Remove the "master.db" database and the "master" folder
 
 See the PARTITIONING.txt file for instructions on how to partition a log file into a partitioned dataset!
 
+
 3) LAUNCH THE MASTER
 
 Launch the master with the command: python launch.py --type master --conf master --port 5001
@@ -47,30 +58,4 @@ Launch a slave (that are master-aware) with the command:
 python launch.py --type slave --conf slave1 --port 5002 --master-host 127.0.0.1 --master-port 5001
 (replace possibly the port used by the slave, and the host/port that points to the master).
 
-## Demo on a custom server
 
-It may work, or it may not work :)
-
-Distributed DFG calculation:
- 
-http://212.237.8.106:5001/calculateDfg?keyphrase=hello&process=roadtraffic
- 
-http://212.237.8.106:5001/calculateDfg?keyphrase=hello&process=bpic2018
- 
-http://212.237.8.106:5001/calculateDfg?keyphrase=hello&process=bpic2019
- 
-Retrieval of the start activities of the log:
- 
-http://212.237.8.106:5001/getStartActivities?keyphrase=hello&process=roadtraffic
- 
-http://212.237.8.106:5001/getStartActivities?keyphrase=hello&process=bpic2018
- 
-http://212.237.8.106:5001/getStartActivities?keyphrase=hello&process=bpic2019
- 
-Retrieval of the end activities of the log:
- 
-http://212.237.8.106:5001/getEndActivities?keyphrase=hello&process=roadtraffic
- 
-http://212.237.8.106:5001/getEndActivities?keyphrase=hello&process=bpic2018
- 
-http://212.237.8.106:5001/getEndActivities?keyphrase=hello&process=bpic2019
