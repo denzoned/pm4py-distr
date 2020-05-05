@@ -91,6 +91,11 @@ def ping_from_slave():
                  "http://" + MasterVariableContainer.master.host + ":" + str(MasterVariableContainer.master.slaves[id][2]) + "/getMemory?keyphrase=" + configuration.KEYPHRASE)
             response = json.loads(r2.text)
             MasterVariableContainer.master.slaves[str(id)][5] = response['Memory']
+            r3 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][2]) + "/getCPU?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r3.text)
+            MasterVariableContainer.master.slaves[str(id)][6] = response['CPU']
         except:
             del MasterVariableContainer.master.slaves[id]
             return "Error while pinging slave"

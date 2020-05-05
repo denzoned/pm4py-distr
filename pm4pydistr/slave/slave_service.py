@@ -563,7 +563,7 @@ def get_CPU():
 
     if keyphrase == configuration.KEYPHRASE:
         points = SlaveVariableContainer.slave.get_CPU()
-        return jsonify({"Memory": points})
+        return jsonify({"CPU": points})
 
     return jsonify({})
 

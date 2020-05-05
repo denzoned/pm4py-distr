@@ -87,8 +87,13 @@ class Slave:
         return mem
 
     def get_CPU(self):
-        cpulist = psutil.cpu_percent(interval=1, percpu=True)
-        return cpulist
+        cpuload = os.getloadavg()
+        cpuuse = psutil.cpu_percent(interval=1, percpu=True)
+        return cpuuse
+
+    def get_load(self):
+        cpuload= psutil.getloadavg()
+        return cpuload
 
     def get_temperature(self):
         pythoncom.CoInitialize()
