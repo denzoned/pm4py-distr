@@ -1,3 +1,4 @@
+import math
 import os
 from collections import Counter
 from pathlib import Path
@@ -112,19 +113,18 @@ class Master:
 
         for slave in all_slaves:
             check = False
-            #if slave.get_current_PID_info() != slave:
+            # if slave.get_current_PID_info() != slave:
             #    MasterVariableContainer.log_assignment_done = False
             PID1 = str(self.slaves[slave][4])
-            #return PID1
+            # return PID1
             for pid2 in self.get_running_processes():
-                #return str(pid2["pid"])
+                # return str(pid2["pid"])
                 if str(PID1) == str(pid2["pid"]):
                     check = True
             if check == False:
                 del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
                 MasterVariableContainer.slave_loading_requested = False
-
 
     def make_slaves_load(self):
         if not MasterVariableContainer.slave_loading_requested:
@@ -412,8 +412,8 @@ class Master:
                     dictio_variants[variant]["caseDuration"] = (dictio_variants[variant]["caseDuration"] *
                                                                 dictio_variants[variant]["count"] + d_variants[variant][
                                                                     "caseDuration"] * d_variants[variant]["count"]) / (
-                                                                           dictio_variants[variant]["count"] +
-                                                                           d_variants[variant]["count"])
+                                                                       dictio_variants[variant]["count"] +
+                                                                       d_variants[variant]["count"])
                     dictio_variants[variant]["count"] = dictio_variants[variant]["count"] + d_variants[variant]["count"]
 
             list_variants = sorted(list(dictio_variants.values()), key=lambda x: x["count"], reverse=True)
@@ -620,7 +620,6 @@ class Master:
         infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
         return infor
 
-
     def get_OS(self):
         operatingsystem = ""
         if _platform == "linux" or _platform == "linux2":
@@ -654,72 +653,77 @@ class Master:
 
     def get_temperature(self):
         pythoncom.CoInitialize()
-        #w = wmi.WMI(namespace="root\\wmi")
-        #temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-        #return temperature_info.CurrentTemperature
-        #return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+        # w = wmi.WMI(namespace="root\\wmi")
+        # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+        # return temperature_info.CurrentTemperature
+        # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
         w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
         temperature_infos = w.Sensor()
         temp = {}
-        #return temperature_infos
+        # return temperature_infos
         for sensor in temperature_infos:
             if sensor.SensorType == u'Temperature':
                 if sensor.Name == 'CPU Package':
                     temp.update({sensor.Name: sensor.Value})
-                #temp.update({sensor.Name: sensor.Value})
+                # temp.update({sensor.Name: sensor.Value})
         return temp
 
     def get_slaves_list2(self):
-        #pid = os.getpid()
-        #if not MasterVariableContainer.slave_loading_requested:
+        # pid = os.getpid()
+        # if not MasterVariableContainer.slave_loading_requested:
         all_slaves = list(self.slaves.keys())
-        #w, h = len(all_slaves), 5
-        #temporary = [[0 for x in range(h)] for y in range(w)]
-        #temporary = {}
+        # w, h = len(all_slaves), 5
+        # temporary = [[0 for x in range(h)] for y in range(w)]
+        # temporary = {}
 
         temporary = MasterVariableContainer.master.slaves
         i = 0
         for slave in all_slaves:
-
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
 
             uri = "http://" + slave_host + ":" + slave_port + "/getcurrentPIDinfo?keyphrase=" + KEYPHRASE
             r = requests.get(uri)
-            #temporary = r.json()
+            # temporary = r.json()
 
-
-            #dictionary = r.json()
-            #temporary[i] = MasterVariableContainer.master.slaves[slave]
-            #temporary[i][4] = (dictionary["PID"])
-            #i = i + 1
+            # dictionary = r.json()
+            # temporary[i] = MasterVariableContainer.master.slaves[slave]
+            # temporary[i][4] = (dictionary["PID"])
+            # i = i + 1
         return temporary
 
-
     def simple_imd(self, session, process, use_transition, no_samples, attribute):
-        #get DFG
+        # get DFG
         r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
-        #r = requests.get(uri)
+        # r = requests.get(uri)
         dfg = jsonify(r)
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
-        #apply_dfg(dict(r), None, False, start, end)
+        # apply_dfg(dict(r), None, False, start, end)
 
-        #return str(dfg)
+        # return str(dfg)
         return dict(r)
 
-        #apply DFG on IMD
-        #apply_dfg()
+        # apply DFG on IMD
+        # apply_dfg()
 
     def distr_imd(self, session, process, use_transition, no_samples, attribute):
-        #get DFG
+        # get DFG
         r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
 
         return r
 
-    def res_ram(self, id):
-        #slave_host = self.slaves[id][1]
-        #slave_port = str(self.slaves[id][2])
-        slave_ram = str(self.slaves[id][6])
+    def res_ram(self, k):
+        all_slaves = list(self.slaves.keys())
 
-        return slave_ram
+        count = 0
+        for slave in all_slaves:
+            count = 0
+            # slave_host = self.slaves[slave][1]
+            # slave_port = str(self.slaves[slave][2])
+            slave_ram = float(self.slaves[slave][6])
+            # resource = MasterVariableContainer.master.res_ram()
+            calc = 1 / (1 + math.exp(-float(k)*((1-slave_ram) - 0.5)))
+            self.slaves[slave][11] = slave_ram
+
+        return str(calc)

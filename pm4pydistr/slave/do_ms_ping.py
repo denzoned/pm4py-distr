@@ -16,14 +16,16 @@ class DoMasterPing(Thread):
         self.master_host = master_host
         self.master_port = master_port
         self.pid = pid
-        #self.ping = time.time()
+        # self.ping = time.time()
         Thread.__init__(self)
 
     def run(self):
         while True:
-            #self.ping = time.time()
-            uri = "http://"+self.master_host+":"+self.master_port+"/pingFromSlave?id="+str(self.id)+"&conf="+str(self.conf)+"&port"+str(self.port)+"&keyphrase="+configuration.KEYPHRASE
+            # self.ping = time.time()
+            uri = "http://" + self.master_host + ":" + self.master_port + "/pingFromSlave?id=" + str(
+                self.id) + "&conf=" + str(self.conf) + "&port" + str(
+                self.port) + "&keyphrase=" + configuration.KEYPHRASE
             r = requests.get(uri)
-            #print("done ping request")
-            #thread sleeps for configuration.SLEEPING_TIME = 30 secs after a request
+            # print("done ping request")
+            # thread sleeps for configuration.SLEEPING_TIME = 30 secs after a request
             time.sleep(configuration.SLEEPING_TIME)

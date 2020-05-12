@@ -15,8 +15,10 @@ import os
 import json
 
 import logging
+
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
+
 
 class SlaveSocketListener(Thread):
     app = Flask(__name__)
@@ -68,14 +70,17 @@ def set_filters():
         try:
             SlaveVariableContainer.slave.filters[session][process] = eval(json.loads(request.data)["filters"])
         except:
-            SlaveVariableContainer.slave.filters[session][process] = eval(json.loads(request.data.decode('utf-8'))["filters"])
+            SlaveVariableContainer.slave.filters[session][process] = eval(
+                json.loads(request.data.decode('utf-8'))["filters"])
     return jsonify({})
+
 
 def get_filters_per_session(process, session):
     if session in SlaveVariableContainer.slave.filters:
         if process in SlaveVariableContainer.slave.filters[session]:
             return SlaveVariableContainer.slave.filters[session][process]
     return []
+
 
 @SlaveSocketListener.app.route("/calculateDfg", methods=["GET"])
 def calculate_dfg():
@@ -100,7 +105,9 @@ def calculate_dfg():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters[pm4py_constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY] = attribute_key
 
-        returned_dict = parquet_handler.calculate_dfg(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.calculate_dfg(SlaveVariableContainer.conf, process,
+                                                      SlaveVariableContainer.managed_logs[process],
+                                                      parameters=parameters)
 
         return jsonify({"dfg": returned_dict})
     return jsonify({"dfg": {}})
@@ -129,7 +136,9 @@ def calculate_performance_dfg():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters[pm4py_constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY] = attribute_key
 
-        returned_dict = parquet_handler.calculate_performance_dfg(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.calculate_performance_dfg(SlaveVariableContainer.conf, process,
+                                                                  SlaveVariableContainer.managed_logs[process],
+                                                                  parameters=parameters)
 
         return jsonify({"dfg": returned_dict})
     return jsonify({"dfg": {}})
@@ -164,7 +173,9 @@ def calculate_composite_obj():
         parameters[pm4py_constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY] = attribute_key
         parameters["performance_required"] = performance_required
 
-        returned_dict = parquet_handler.calculate_process_schema_composite_object(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.calculate_process_schema_composite_object(SlaveVariableContainer.conf, process,
+                                                                                  SlaveVariableContainer.managed_logs[
+                                                                                      process], parameters=parameters)
 
         return jsonify({"obj": returned_dict})
     return jsonify({"obj": {}})
@@ -190,7 +201,9 @@ def calculate_end_activities():
         parameters[PARAMETER_USE_TRANSITION] = use_transition
         parameters[PARAMETER_NO_SAMPLES] = no_samples
 
-        returned_dict = parquet_handler.get_end_activities(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_end_activities(SlaveVariableContainer.conf, process,
+                                                           SlaveVariableContainer.managed_logs[process],
+                                                           parameters=parameters)
 
         return jsonify({"end_activities": returned_dict})
     return jsonify({"end_activities": {}})
@@ -216,7 +229,9 @@ def calculate_start_activities():
         parameters[PARAMETER_USE_TRANSITION] = use_transition
         parameters[PARAMETER_NO_SAMPLES] = no_samples
 
-        returned_dict = parquet_handler.get_start_activities(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_start_activities(SlaveVariableContainer.conf, process,
+                                                             SlaveVariableContainer.managed_logs[process],
+                                                             parameters=parameters)
 
         return jsonify({"start_activities": returned_dict})
     return jsonify({"start_activities": {}})
@@ -245,7 +260,9 @@ def calculate_attribute_values():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters[pm4py_constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY] = attribute_key
 
-        returned_dict = parquet_handler.get_attribute_values(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_attribute_values(SlaveVariableContainer.conf, process,
+                                                             SlaveVariableContainer.managed_logs[process],
+                                                             parameters=parameters)
 
         return jsonify({"values": returned_dict})
     return jsonify({"values": {}})
@@ -272,7 +289,9 @@ def calculate_attribute_names():
         parameters[PARAMETER_USE_TRANSITION] = use_transition
         parameters[PARAMETER_NO_SAMPLES] = no_samples
 
-        returned_list = parquet_handler.get_attribute_names(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_list = parquet_handler.get_attribute_names(SlaveVariableContainer.conf, process,
+                                                            SlaveVariableContainer.managed_logs[process],
+                                                            parameters=parameters)
 
         return jsonify({"names": returned_list})
     return jsonify({"names": {}})
@@ -299,7 +318,8 @@ def calculate_log_summary():
         parameters[PARAMETER_USE_TRANSITION] = use_transition
         parameters[PARAMETER_NO_SAMPLES] = no_samples
 
-        summary = parquet_handler.get_log_summary(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        summary = parquet_handler.get_log_summary(SlaveVariableContainer.conf, process,
+                                                  SlaveVariableContainer.managed_logs[process], parameters=parameters)
 
         return jsonify({"summary": summary})
     return jsonify({"summary": {}})
@@ -328,7 +348,9 @@ def get_variants():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters[PARAMETER_NUM_RET_ITEMS] = max_no_ret_items
 
-        returned_dict = parquet_handler.get_variants(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_variants(SlaveVariableContainer.conf, process,
+                                                     SlaveVariableContainer.managed_logs[process],
+                                                     parameters=parameters)
 
         return jsonify(returned_dict)
     return jsonify({"variants": [], "events": 0, "cases": 0})
@@ -357,7 +379,8 @@ def get_cases():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters[PARAMETER_NUM_RET_ITEMS] = max_no_ret_items
 
-        returned_dict = parquet_handler.get_cases(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_cases(SlaveVariableContainer.conf, process,
+                                                  SlaveVariableContainer.managed_logs[process], parameters=parameters)
 
         return jsonify(returned_dict)
     return jsonify({"cases_list": [], "events": 0, "cases": 0})
@@ -374,7 +397,8 @@ def do_caching():
         parameters = {}
         parameters[PARAMETER_NO_SAMPLES] = no_samples
 
-        parquet_handler.do_caching(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        parquet_handler.do_caching(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process],
+                                   parameters=parameters)
 
     return jsonify({})
 
@@ -401,7 +425,8 @@ def get_events():
         parameters[PARAMETER_NO_SAMPLES] = no_samples
         parameters["case_id"] = case_id
 
-        events = parquet_handler.get_events(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        events = parquet_handler.get_events(SlaveVariableContainer.conf, process,
+                                            SlaveVariableContainer.managed_logs[process], parameters=parameters)
 
         return jsonify({"events": events})
     return jsonify({"events": {}})
@@ -436,7 +461,9 @@ def get_events_per_dotted():
         parameters["attribute3"] = attribute3
         parameters["max_no_cases"] = max_no_ret_items
 
-        returned_dict = parquet_handler.get_events_per_dotted(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_dict = parquet_handler.get_events_per_dotted(SlaveVariableContainer.conf, process,
+                                                              SlaveVariableContainer.managed_logs[process],
+                                                              parameters=parameters)
 
         return jsonify(returned_dict)
     return jsonify({})
@@ -466,7 +493,9 @@ def get_events_per_time():
         parameters[PARAMETER_NUM_RET_ITEMS] = max_no_ret_items
         parameters["max_no_of_points_to_sample"] = max_no_ret_items
 
-        returned_list = parquet_handler.get_events_per_time(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_list = parquet_handler.get_events_per_time(SlaveVariableContainer.conf, process,
+                                                            SlaveVariableContainer.managed_logs[process],
+                                                            parameters=parameters)
 
         return jsonify({"points": returned_list})
 
@@ -497,7 +526,9 @@ def get_case_duration():
         parameters[PARAMETER_NUM_RET_ITEMS] = max_no_ret_items
         parameters["max_no_of_points_to_sample"] = max_no_ret_items
 
-        returned_list = parquet_handler.get_case_duration(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_list = parquet_handler.get_case_duration(SlaveVariableContainer.conf, process,
+                                                          SlaveVariableContainer.managed_logs[process],
+                                                          parameters=parameters)
 
         return jsonify({"points": returned_list})
 
@@ -530,7 +561,9 @@ def get_numeric_attribute_values():
         parameters["max_no_of_points_to_sample"] = max_no_ret_items
         parameters["attribute_key"] = attribute_key
 
-        returned_list = parquet_handler.get_numeric_attribute_values(SlaveVariableContainer.conf, process, SlaveVariableContainer.managed_logs[process], parameters=parameters)
+        returned_list = parquet_handler.get_numeric_attribute_values(SlaveVariableContainer.conf, process,
+                                                                     SlaveVariableContainer.managed_logs[process],
+                                                                     parameters=parameters)
 
         return jsonify({"points": returned_list})
 
@@ -547,6 +580,7 @@ def get_current_PID_info():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getMemory", methods=["GET"])
 def get_memory():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -556,6 +590,7 @@ def get_memory():
         return jsonify({"Memory": points})
 
     return jsonify({})
+
 
 @SlaveSocketListener.app.route("/getCPU", methods=["GET"])
 def get_CPU():
@@ -567,6 +602,7 @@ def get_CPU():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getCPUload", methods=["GET"])
 def get_CPUload():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -577,6 +613,7 @@ def get_CPUload():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getTemperature", methods=["GET"])
 def get_temp():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -586,6 +623,7 @@ def get_temp():
         return jsonify({"Temperature": points})
 
     return jsonify({})
+
 
 @SlaveSocketListener.app.route("/getDiskUsage", methods=["GET"])
 def get_diskusage():
