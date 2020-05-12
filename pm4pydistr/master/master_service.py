@@ -47,7 +47,8 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1]
+        #conf, id, port, time, PID, memory, CPUpct, cpuload, ping,
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1]
         try:
             r2 = requests.get(
             "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
@@ -68,7 +69,7 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1 ,1]
         return jsonify({"id": id})
 
 
@@ -96,6 +97,17 @@ def ping_from_slave():
                     MasterVariableContainer.master.slaves[id][2]) + "/getCPU?keyphrase=" + configuration.KEYPHRASE)
             response = json.loads(r3.text)
             MasterVariableContainer.master.slaves[str(id)][6] = response['CPU']
+            r4 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][2]) + "/getCPUload?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r4.text)
+            MasterVariableContainer.master.slaves[str(id)][7] = response['CPUload']
+            r5 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r5.text)
+            MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
+
         except:
             del MasterVariableContainer.master.slaves[id]
             return "Error while pinging slave"
@@ -493,7 +505,17 @@ def get_CPU():
 
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.get_CPU()
-        return jsonify({"CPUusage": points})
+        return jsonify({"CPUpct": points})
+
+    return jsonify({})
+
+@MasterSocketListener.app.route("/getCPUload", methods=["GET"])
+def get_CPUload():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_CPUload()
+        return jsonify({"CPUload": points})
 
     return jsonify({})
 

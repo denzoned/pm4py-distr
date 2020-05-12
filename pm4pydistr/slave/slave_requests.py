@@ -39,3 +39,5 @@ class SlaveRequests:
         response = json.load(r.text)
         response = response['PID']
         return response
+
+

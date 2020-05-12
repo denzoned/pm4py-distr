@@ -35,7 +35,8 @@ class Slave:
         self.ping_module = None
         self.pid = None
         self.memory = None
-        self.CPU = None
+        self.CPUpct = None
+        self.CPUload = None
         self.ping = None
 
         self.filters = {}
@@ -87,8 +88,7 @@ class Slave:
         return mem
 
     def get_CPU(self):
-        cpuload = os.getloadavg()
-        cpuuse = psutil.cpu_percent(interval=1, percpu=True)
+        cpuuse = psutil.cpu_percent(interval=1, percpu=False)
         return cpuuse
 
     def get_load(self):

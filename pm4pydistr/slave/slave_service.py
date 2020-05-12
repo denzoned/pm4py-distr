@@ -567,6 +567,16 @@ def get_CPU():
 
     return jsonify({})
 
+@SlaveSocketListener.app.route("/getCPUload", methods=["GET"])
+def get_CPUload():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_load()
+        return jsonify({"CPUload": points})
+
+    return jsonify({})
+
 @SlaveSocketListener.app.route("/getTemperature", methods=["GET"])
 def get_temp():
     keyphrase = request.args.get('keyphrase', type=str)

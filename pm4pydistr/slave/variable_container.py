@@ -6,6 +6,6 @@ class SlaveVariableContainer:
     conf = None
     pid = None
     memory = None
-    cpu = None
-
+    cpupct = None
+    cpuload = None
     managed_logs = {}
