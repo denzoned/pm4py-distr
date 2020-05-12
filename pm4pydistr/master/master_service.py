@@ -47,8 +47,8 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        #conf, id, port, time, PID, memory, CPUpct, cpuload, ping,
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1]
+        #conf, id, port, time, PID, memory, CPUpct, cpuload, ping, temp
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1]
         try:
             r2 = requests.get(
             "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
@@ -107,6 +107,12 @@ def ping_from_slave():
                     MasterVariableContainer.master.slaves[id][2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
             response = json.loads(r5.text)
             MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
+            r6 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r6.text)
+            MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
+
 
         except:
             del MasterVariableContainer.master.slaves[id]

@@ -92,7 +92,8 @@ class Slave:
         return cpuuse
 
     def get_load(self):
-        cpuload= psutil.getloadavg()
+        cpuload = [x / psutil.cpu_count() * 100 for x in psutil.getloadavg()]
+        #cpuload= psutil.getloadavg()
         return cpuload
 
     def get_temperature(self):

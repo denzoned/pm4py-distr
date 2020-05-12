@@ -716,3 +716,10 @@ class Master:
         r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
 
         return r
+
+    def res_ram(self, id):
+        #slave_host = self.slaves[id][1]
+        #slave_port = str(self.slaves[id][2])
+        slave_ram = str(self.slaves[id][6])
+
+        return slave_ram
