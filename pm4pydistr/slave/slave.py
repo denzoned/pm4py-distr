@@ -94,7 +94,8 @@ class Slave:
         return cpuuse
 
     def get_load(self):
-        cpuload = [x / psutil.cpu_count() * 100 for x in psutil.getloadavg()]
+        cpuload = [x / psutil.cpu_count() for x in psutil.getloadavg()]
+        cpuload = [x / psutil.cpu_count() for x in psutil.getloadavg()]
         # cpuload= psutil.getloadavg()
         return cpuload
 

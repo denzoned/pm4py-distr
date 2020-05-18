@@ -51,9 +51,9 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        # 0conf, 1id, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8ping, 9temp, 10OS, 11ResTempSave, 12Resourcefctvalue
+        # 0conf, 1host, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8DiskUsage, 9temp, 10OS, 11ResTempSave, 12Resourcefctvalue
         # OS: 0 Linux, 1 MAC, 2 Windows
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0,0], 1]
         try:
             r2 = requests.get(
                 "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
@@ -74,7 +74,7 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0,0], 1]
         return jsonify({"id": id})
 
 
@@ -128,7 +128,7 @@ def ping_from_slave():
             MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
 
         except requests.exceptions.RequestException as e:
-            del MasterVariableContainer.master.slaves[id]
+            #del MasterVariableContainer.master.slaves[id]
             pass
 
         return jsonify({"id": id})
@@ -698,5 +698,5 @@ def cpu_fct():
 
     if keyphrase == configuration.KEYPHRASE:
         resource = MasterVariableContainer.master.res_cpu()
-        return resource
+        return jsonify({"Stabel": {}})
     return jsonify({"Error": {}})

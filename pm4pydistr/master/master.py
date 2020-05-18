@@ -728,24 +728,36 @@ class Master:
             # resource = MasterVariableContainer.master.res_ram()
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             print(calc)
-            self.slaves[slave][11] = slave_ram
+            self.slaves[slave][11][0] = slave_ram
 
-        return str(calc)
+        return str(slave_ram)
 
     def res_cpu(self):
         all_slaves = list(self.slaves.keys())
 
         for slave in all_slaves:
-            slave_cpu = self.slaves[slave][7][1]
-            slave_temp = self.slaves[slave][9]
-            # print(slave_ram)
-            slave_ram = slave_ram / configuration.MAX_RAM
-            print(slave_ram)
-            # resource = MasterVariableContainer.master.res_ram()
-            #calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
-            self.slaves[slave][11] = slave_ram
-
-        return str(1)
+            load1 = self.slaves[slave][7][0]
+            load5 = self.slaves[slave][7][1]
+            temp = self.slaves[slave][9]
+            usage = self.slaves[slave][6]/100
+            print(load1)
+            if load1 > 1.1:
+                hload = 0
+            elif load5 != 0:
+                hload = (1-load1/load5)*(1-(load1/1.1))
+            else:
+                hload = 1
+            maxtemp = configuration.MAX_T_JUNCTION*0.8
+            if maxtemp > temp:
+                htemp = 1
+            else:
+                htemp = 0
+            print(hload)
+            print(usage)
+            hcpu = (1-usage)**(1.1-hload)*htemp
+            print(hcpu.real)
+            self.slaves[slave][11][1] = hcpu.real
+        return hcpu.real
 
     def master_init(self, session, process, use_transition, no_samples, attribute_key, doall):
         # Get configuration values
@@ -763,6 +775,6 @@ class Master:
                                                                 attribute_key)
             #print(type(calc))
             #return True
-        return True
+        return None
 
 
