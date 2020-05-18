@@ -11,6 +11,7 @@ import socket
 import pythoncom
 import wmi
 import os
+from sys import platform as _platform
 import shutil
 import psutil
 from pythonping import ping
@@ -97,22 +98,38 @@ class Slave:
         # cpuload= psutil.getloadavg()
         return cpuload
 
-    def get_temperature(self):
-        pythoncom.CoInitialize()
-        # w = wmi.WMI(namespace="root\\wmi")
-        # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-        # return temperature_info.CurrentTemperature
-        # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
-        w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
-        temperature_infos = w.Sensor()
-        temp = {}
-        # return temperature_infos
-        for sensor in temperature_infos:
-            if sensor.SensorType == u'Temperature':
-                if sensor.Name == 'CPU Package':
-                    temp.update({sensor.Name: sensor.Value})
-                # temp.update({sensor.Name: sensor.Value})
+    def get_temperature(self, operatingsystem):
+        print(operatingsystem)
+        print(type(operatingsystem))
+        if operatingsystem == "2":
+            pythoncom.CoInitialize()
+            # w = wmi.WMI(namespace="root\\wmi")
+            # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+            # return temperature_info.CurrentTemperature
+            # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+            w = wmi.WMI(namespace="root\OpenHardwareMonitor")
+            temperature_infos = w.Sensor()
+            temp = 100
+            # return temperature_infos
+            for sensor in temperature_infos:
+                if sensor.SensorType == u'Temperature':
+                    if sensor.Name == 'CPU Package':
+                        temp = sensor.Value
+                        #print("CPUTemp: " + str(temp))
+        else:
+        # TODO placeholder for Linuxversion
+            temp = 50
         return temp
+
+    def get_OS(self):
+        operatingsystem = 0
+        if _platform == "linux" or _platform == "linux2":
+            operatingsystem = 0
+        elif _platform == "darwin":
+            operatingsystem = 1
+        elif _platform == "win32" or _platform == "win64":
+            operatingsystem = 2
+        return operatingsystem
 
     def get_disk_usage(self):
         disk = psutil.disk_usage('/')

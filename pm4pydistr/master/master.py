@@ -15,6 +15,7 @@ from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4py.util import points_subset
 from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
 
+from pm4pydistr import configuration
 from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4pydistr.configuration import KEYPHRASE
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS
@@ -63,6 +64,8 @@ class Master:
 
         self.session_checker = SessionChecker(self)
         self.session_checker.start()
+
+        self.init_dfg = Counter()
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -184,6 +187,7 @@ class Master:
 
             overall_dfg = overall_dfg + Counter(thread.content['dfg'])
 
+        self.init_dfg = overall_dfg
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -715,15 +719,50 @@ class Master:
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
-
-        count = 0
+        print(configuration.MAX_RAM)
         for slave in all_slaves:
-            count = 0
-            # slave_host = self.slaves[slave][1]
-            # slave_port = str(self.slaves[slave][2])
-            slave_ram = float(self.slaves[slave][6])
+            slave_ram = self.slaves[slave][5][1]
+            # print(slave_ram)
+            slave_ram = slave_ram / configuration.MAX_RAM
+            print(slave_ram)
             # resource = MasterVariableContainer.master.res_ram()
-            calc = 1 / (1 + math.exp(-float(k)*((1-slave_ram) - 0.5)))
+            calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
+            print(calc)
             self.slaves[slave][11] = slave_ram
 
         return str(calc)
+
+    def res_cpu(self):
+        all_slaves = list(self.slaves.keys())
+
+        for slave in all_slaves:
+            slave_cpu = self.slaves[slave][7][1]
+            slave_temp = self.slaves[slave][9]
+            # print(slave_ram)
+            slave_ram = slave_ram / configuration.MAX_RAM
+            print(slave_ram)
+            # resource = MasterVariableContainer.master.res_ram()
+            #calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
+            self.slaves[slave][11] = slave_ram
+
+        return str(1)
+
+    def master_init(self, session, process, use_transition, no_samples, attribute_key, doall):
+        # Get configuration values
+        all_slaves = list(self.slaves.keys())
+        configuration.MAX_RAM = 0
+        for slave in all_slaves:
+            ram = self.slaves[slave][5][0]
+            if ram > configuration.MAX_RAM:
+                configuration.MAX_RAM = ram
+        MasterVariableContainer.master.check_slaves()
+        MasterVariableContainer.master.do_assignment()
+        MasterVariableContainer.master.make_slaves_load()
+        if doall == 1:
+            MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
+                                                                attribute_key)
+            #print(type(calc))
+            #return True
+        return True
+
+

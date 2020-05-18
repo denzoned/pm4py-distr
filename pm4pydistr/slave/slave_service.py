@@ -617,13 +617,23 @@ def get_CPUload():
 @SlaveSocketListener.app.route("/getTemperature", methods=["GET"])
 def get_temp():
     keyphrase = request.args.get('keyphrase', type=str)
-
+    operatingsystem = request.args.get('operatingsystem', type=str)
+    print(operatingsystem)
     if keyphrase == configuration.KEYPHRASE:
-        points = SlaveVariableContainer.slave.get_temperature()
+        points = SlaveVariableContainer.slave.get_temperature(operatingsystem)
         return jsonify({"Temperature": points})
 
     return jsonify({})
 
+@SlaveSocketListener.app.route("/getOS", methods=["GET"])
+def get_OS():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_OS()
+        return jsonify({"OS": points})
+
+    return jsonify({})
 
 @SlaveSocketListener.app.route("/getDiskUsage", methods=["GET"])
 def get_diskusage():

@@ -51,7 +51,8 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        # 1conf, 2id, 3port, 4time, 5PID, 6memory, 7CPUpct, 8cpuload, 9ping, 10temp, 11, 12, 13Resourcefctvalue
+        # 0conf, 1id, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8ping, 9temp, 10OS, 11ResTempSave, 12Resourcefctvalue
+        # OS: 0 Linux, 1 MAC, 2 Windows
         MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, 1, 1]
         try:
             r2 = requests.get(
@@ -73,7 +74,7 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, 1, 1]
         return jsonify({"id": id})
 
 
@@ -113,17 +114,22 @@ def ping_from_slave():
                         2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
             response = json.loads(r5.text)
             MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
+            r7 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][
+                        2]) + "/getOS?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r7.text)
+            MasterVariableContainer.master.slaves[str(id)][10] = response['OS']
             r6 = requests.get(
                 "http://" + MasterVariableContainer.master.host + ":" + str(
                     MasterVariableContainer.master.slaves[id][
-                        2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE)
+                        2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
             response = json.loads(r6.text)
             MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
 
-
-        except:
+        except requests.exceptions.RequestException as e:
             del MasterVariableContainer.master.slaves[id]
-            return "Error while pinging slave"
+            pass
 
         return jsonify({"id": id})
 
@@ -650,6 +656,47 @@ def ram_fct():
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
 
     if keyphrase == configuration.KEYPHRASE:
-        resource = MasterVariableContainer.master.res_ram(k)
+        if type(k) == int or type(k) == float:
+            resource = MasterVariableContainer.master.res_ram(k)
+            return resource
+        else:
+            resource = MasterVariableContainer.master.res_ram(configuration.DEFAULT_K)
+            return resource
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/initialize", methods=["GET"])
+def initialize():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    # do_all set 1 to calcDFG, 0 only log assignment
+    doall = request.args.get('doall', type=int)
+
+    if keyphrase == configuration.KEYPHRASE:
+        init = MasterVariableContainer.master.master_init(session, process, use_transition, no_samples, attribute_key,
+                                                          doall)
+        return jsonify({"Initialization": init})
+    return jsonify({"Wrong Keyphrase": {}})
+
+
+@MasterSocketListener.app.route("/CPUfunction", methods=["GET"])
+def cpu_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    # id = request.args.get('id', type=str)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        resource = MasterVariableContainer.master.res_cpu()
         return resource
     return jsonify({"Error": {}})
