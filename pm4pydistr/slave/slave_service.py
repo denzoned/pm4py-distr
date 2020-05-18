@@ -618,7 +618,6 @@ def get_CPUload():
 def get_temp():
     keyphrase = request.args.get('keyphrase', type=str)
     operatingsystem = request.args.get('operatingsystem', type=str)
-    print(operatingsystem)
     if keyphrase == configuration.KEYPHRASE:
         points = SlaveVariableContainer.slave.get_temperature(operatingsystem)
         return jsonify({"Temperature": points})

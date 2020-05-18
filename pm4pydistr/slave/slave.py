@@ -99,8 +99,6 @@ class Slave:
         return cpuload
 
     def get_temperature(self, operatingsystem):
-        print(operatingsystem)
-        print(type(operatingsystem))
         if operatingsystem == "2":
             pythoncom.CoInitialize()
             # w = wmi.WMI(namespace="root\\wmi")
