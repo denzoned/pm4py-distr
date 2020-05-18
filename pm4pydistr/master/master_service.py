@@ -53,7 +53,8 @@ def register_slave():
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
         # 0conf, 1host, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8DiskUsage, 9temp, 10OS, 11ResTempSave, 12Resourcefctvalue
         # OS: 0 Linux, 1 MAC, 2 Windows
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0,0], 1]
+        # ResTempSave: RAM, CPU, Disk
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
         try:
             r2 = requests.get(
                 "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
@@ -74,7 +75,7 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0,0], 1]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
         return jsonify({"id": id})
 
 
@@ -126,6 +127,12 @@ def ping_from_slave():
                         2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
             response = json.loads(r6.text)
             MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
+            r8 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + str(
+                    MasterVariableContainer.master.slaves[id][
+                        2]) + "/getIOWait?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
+            response = json.loads(r8.text)
+            MasterVariableContainer.master.slaves[str(id)][13] = response['IOWait']
 
         except requests.exceptions.RequestException as e:
             #del MasterVariableContainer.master.slaves[id]
@@ -588,7 +595,7 @@ def get_memory():
 @MasterSocketListener.app.route("/getTemperature", methods=["GET"])
 def get_temp():
     keyphrase = request.args.get('keyphrase', type=str)
-
+    # only for Windows
     if keyphrase == configuration.KEYPHRASE:
         points = MasterVariableContainer.master.get_temperature()
         return jsonify({"Temperature": points})
@@ -698,5 +705,23 @@ def cpu_fct():
 
     if keyphrase == configuration.KEYPHRASE:
         resource = MasterVariableContainer.master.res_cpu()
-        return jsonify({"Stabel": {}})
+        return jsonify({"CPUfct": resource})
     return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/DISKfunction", methods=["GET"])
+def disk_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    # id = request.args.get('id', type=str)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        resource = MasterVariableContainer.master.res_disk()
+        return jsonify({"DISKfct": resource})
+    return jsonify({"Error": {}})
+

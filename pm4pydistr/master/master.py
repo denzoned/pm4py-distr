@@ -11,6 +11,7 @@ import psutil
 import pythoncom
 import requests
 import wmi
+import sys
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4py.util import points_subset
 from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
@@ -758,6 +759,22 @@ class Master:
             print(hcpu.real)
             self.slaves[slave][11][1] = hcpu.real
         return hcpu.real
+
+    def res_disk(self):
+        all_slaves = list(self.slaves.keys())
+
+        for slave in all_slaves:
+            freedisk = self.slaves[slave][8][1]
+            iowait = self.slaves[slave][13]
+            maxdfg = sys.getsizeof(self.init_dfg)
+            print(maxdfg)
+            print(freedisk)
+            if freedisk > maxdfg:
+                h_io = 1 - iowait
+            else:
+                h_io = 0
+            self.slaves[slave][11][2] = h_io
+        return freedisk
 
     def master_init(self, session, process, use_transition, no_samples, attribute_key, doall):
         # Get configuration values

@@ -643,3 +643,14 @@ def get_diskusage():
         return jsonify({"Disk Usage": points})
 
     return jsonify({})
+
+@SlaveSocketListener.app.route("/getIOWait", methods=["GET"])
+def get_iowait():
+    keyphrase = request.args.get('keyphrase', type=str)
+    operatingsystem = request.args.get('operatingsystem', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_iowait(operatingsystem)
+        return jsonify({"IOWait": points})
+
+    return jsonify({})

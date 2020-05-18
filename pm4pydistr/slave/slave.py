@@ -99,6 +99,16 @@ class Slave:
         # cpuload= psutil.getloadavg()
         return cpuload
 
+    def get_iowait(self, operatingsystem):
+        # TODO check if this works for Linux
+        if operatingsystem == "0":
+            p = psutil.Process()
+            iowait = p.cpu_times()[4]
+        else:
+            # not possible for Windows
+            iowait = 0
+        return iowait
+
     def get_temperature(self, operatingsystem):
         if operatingsystem == "2":
             pythoncom.CoInitialize()
