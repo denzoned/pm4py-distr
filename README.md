@@ -8,25 +8,36 @@ just run "python main.py"
 
 The example contains the partitioned version of the logs "receipt" and "roadtraffic".
 
+## Easy setup after running python main.py
+
+1. Run everything needed for Inductive Miner directly-follows based with following call.
+It all steps until DFG calculation if doall=0, if doall=1 it will compute a DFG based on the log.
+
+    http://localhost:5001/initialize?keyphrase=hello&process=receipt&doall=1
+
+2. To get the resource allocation function use:
+    http://localhost:5001/resAllFct?keyphrase=hello&cpu=1&ram=1&disk=0&k=10
+    
+    Each value for CPU, RAM and DISK will give a weight on each resource. 
+    k is the slope variable for the RAM function, default is set to 10.
+    
 ## Example of usage of the distributed services (default keyphrase is "hello"):
 
 1) ALLOCATION OF THE PARTITIONS BETWEEN THE SLAVES
 
-http://localhost:5001/doLogAssignment?keyphrase=hello
+    http://localhost:5001/doLogAssignment?keyphrase=hello
 
 2) CALCULATION OF THE DFG
 
-http://localhost:5001/calculateDfg?keyphrase=hello&process=receipt
+    http://localhost:5001/calculateDfg?keyphrase=hello&process=receipt
 
 3) USE INDUCTIVE MINER-DIRECT FOLLOWS BASED
 
-i)
-http://localhost:5001/distributedIMD?keyphrase=hello&process=receipt
+    i) http://localhost:5001/distributedIMD?keyphrase=hello&process=receipt
 
-ii)
-For comparison without distributing the work
+    ii) For comparison without distributing the work
 
-http://localhost:5001/simpleIMD?keyphrase=hello&process=receipt
+    http://localhost:5001/simpleIMD?keyphrase=hello&process=receipt
 
 ## Configuration of the keyphrase
 

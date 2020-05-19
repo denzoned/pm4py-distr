@@ -736,19 +736,19 @@ class Master:
             load1 = self.slaves[slave][7][0]
             load5 = self.slaves[slave][7][1]
             temp = self.slaves[slave][9]
-            usage = self.slaves[slave][6]/100
+            usage = self.slaves[slave][6] / 100
             if load1 > 1.1:
                 hload = 0
             elif load5 != 0:
-                hload = (1-load1/load5)*(1-(load1/1.1))
+                hload = (1 - load1 / load5) * (1 - (load1 / 1.1))
             else:
                 hload = 1
-            maxtemp = configuration.MAX_T_JUNCTION*0.8
+            maxtemp = configuration.MAX_T_JUNCTION * 0.8
             if maxtemp > temp:
                 htemp = 1
             else:
                 htemp = 0
-            hcpu = (1-usage)**(1.1-hload)*htemp
+            hcpu = (1 - usage) ** (1.1 - hload) * htemp
             self.slaves[slave][11][1] = hcpu.real
         return hcpu.real
 
@@ -780,7 +780,7 @@ class Master:
         MasterVariableContainer.master.make_slaves_load()
         if doall == 1:
             MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
-                                                                attribute_key)
+                                                         attribute_key)
         return None
 
     def res_all(self, ram, cpu, disk, k):
@@ -794,6 +794,6 @@ class Master:
             cpuval = self.slaves[slave][11][1]
             diskval = self.slaves[slave][11][2]
             f = (ram * ramval) + (cpu * cpuval) + (disk * diskval)
-            f = f/(ram+cpu+disk)
+            f = f / (ram + cpu + disk)
             self.slaves[slave][12] = f
         return None
