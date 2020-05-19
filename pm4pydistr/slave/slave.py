@@ -118,13 +118,18 @@ class Slave:
             # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
             w = wmi.WMI(namespace="root\OpenHardwareMonitor")
             temperature_infos = w.Sensor()
+
             temp = 100
             # return temperature_infos
             for sensor in temperature_infos:
                 if sensor.SensorType == u'Temperature':
                     if sensor.Name == 'CPU Package':
                         temp = sensor.Value
-                        #print("CPUTemp: " + str(temp))
+                        return temp
+            else:
+                temp = 79
+                print("Start Hardwaremonitor")
+                return "start Hardwaremonitor"
         else:
         # TODO placeholder for Linuxversion
             temp = 50

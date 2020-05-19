@@ -720,15 +720,11 @@ class Master:
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
-        print(configuration.MAX_RAM)
+        # print(configuration.MAX_RAM)
         for slave in all_slaves:
             slave_ram = self.slaves[slave][5][1]
-            # print(slave_ram)
             slave_ram = slave_ram / configuration.MAX_RAM
-            print(slave_ram)
-            # resource = MasterVariableContainer.master.res_ram()
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
-            print(calc)
             self.slaves[slave][11][0] = slave_ram
 
         return str(slave_ram)
@@ -741,7 +737,6 @@ class Master:
             load5 = self.slaves[slave][7][1]
             temp = self.slaves[slave][9]
             usage = self.slaves[slave][6]/100
-            print(load1)
             if load1 > 1.1:
                 hload = 0
             elif load5 != 0:
@@ -753,22 +748,18 @@ class Master:
                 htemp = 1
             else:
                 htemp = 0
-            print(hload)
-            print(usage)
             hcpu = (1-usage)**(1.1-hload)*htemp
-            print(hcpu.real)
             self.slaves[slave][11][1] = hcpu.real
         return hcpu.real
 
     def res_disk(self):
         all_slaves = list(self.slaves.keys())
-
+        maxdfg = sys.getsizeof(self.init_dfg)
+        # print(self.init_dfg)
+        # print(maxdfg)
         for slave in all_slaves:
             freedisk = self.slaves[slave][8][1]
             iowait = self.slaves[slave][13]
-            maxdfg = sys.getsizeof(self.init_dfg)
-            print(maxdfg)
-            print(freedisk)
             if freedisk > maxdfg:
                 h_io = 1 - iowait
             else:
@@ -790,8 +781,6 @@ class Master:
         if doall == 1:
             MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
                                                                 attribute_key)
-            #print(type(calc))
-            #return True
         return None
 
     def res_all(self, ram, cpu, disk, k):
