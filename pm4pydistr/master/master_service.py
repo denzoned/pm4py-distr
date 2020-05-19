@@ -657,18 +657,17 @@ def ram_fct():
     session = request.args.get('session', type=str)
     attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
     # id = request.args.get('id', type=str)
-    k = request.args.get('k', type=str)
-
+    k = request.args.get('k', type=float)
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
 
     if keyphrase == configuration.KEYPHRASE:
-        if type(k) == int or type(k) == float:
+        if type(k) == float:
             resource = MasterVariableContainer.master.res_ram(k)
-            return resource
+            return str(k)
         else:
             resource = MasterVariableContainer.master.res_ram(configuration.DEFAULT_K)
-            return resource
+            return "10"
     return jsonify({"Error": {}})
 
 
@@ -725,3 +724,24 @@ def disk_fct():
         return jsonify({"DISKfct": resource})
     return jsonify({"Error": {}})
 
+
+@MasterSocketListener.app.route("/resAllFct", methods=["GET"])
+def resall_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    cpu = request.args.get('cpu', type=float)
+    ram = request.args.get('ram', type=float)
+    disk = request.args.get('disk', type=float)
+    k = request.args.get('k', type=float)
+
+    if keyphrase == configuration.KEYPHRASE:
+        if type(cpu) == float and type(ram) == float and type(disk) == float:
+            if type(k) == float:
+                resource = MasterVariableContainer.master.res_all(ram, cpu, disk, k)
+                return jsonify({"Resource Allocation Function": resource})
+            else:
+                resource = MasterVariableContainer.master.res_all(ram, cpu, disk, configuration.DEFAULT_K)
+                return jsonify({"Resource Allocation Function": resource})
+    return jsonify({"Error": {}})

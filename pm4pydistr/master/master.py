@@ -794,4 +794,17 @@ class Master:
             #return True
         return None
 
+    def res_all(self, ram, cpu, disk, k):
+        MasterVariableContainer.master.res_ram(k)
+        MasterVariableContainer.master.res_cpu()
+        MasterVariableContainer.master.res_disk()
 
+        all_slaves = list(self.slaves.keys())
+        for slave in all_slaves:
+            ramval = self.slaves[slave][11][0]
+            cpuval = self.slaves[slave][11][1]
+            diskval = self.slaves[slave][11][2]
+            f = (ram * ramval) + (cpu * cpuval) + (disk * diskval)
+            f = f/(ram+cpu+disk)
+            self.slaves[slave][12] = f
+        return None
