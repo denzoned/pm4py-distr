@@ -654,3 +654,15 @@ def get_iowait():
         return jsonify({"IOWait": points})
 
     return jsonify({})
+
+@SlaveSocketListener.app.route("/getResources", methods=["GET"])
+def get_resources():
+    keyphrase = request.args.get('keyphrase', type=str)
+    operatingsystem = request.args.get('operatingsystem', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_resources()
+        return jsonify(points)
+
+    return jsonify({})
+

@@ -51,7 +51,8 @@ def register_slave():
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        # 0conf, 1host, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8DiskUsage, 9temp, 10OS, 11ResTempSave, 12Resourcefctvalue
+        # 0conf, 1host, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8DiskUsage, 9temp, 10OS, 11ResTempSave,
+        # 12Resourcefctvalue, 13 iowait
         # OS: 0 Linux, 1 MAC, 2 Windows
         # ResTempSave: RAM, CPU, Disk
         MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
@@ -94,46 +95,46 @@ def ping_from_slave():
             # pinged = response_list.rtt_avg_ms
             MasterVariableContainer.master.slaves[id][3] = time()
             # MasterVariableContainer.master.slaves[id][7] = pinged
-            r2 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][2]) + "/getMemory?keyphrase=" + configuration.KEYPHRASE)
-            response = json.loads(r2.text)
-            MasterVariableContainer.master.slaves[str(id)][5] = response['Memory']
-            r3 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][2]) + "/getCPU?keyphrase=" + configuration.KEYPHRASE)
-            response = json.loads(r3.text)
-            MasterVariableContainer.master.slaves[str(id)][6] = response['CPU']
-            r4 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][2]) + "/getCPUload?keyphrase=" + configuration.KEYPHRASE)
-            response = json.loads(r4.text)
-            MasterVariableContainer.master.slaves[str(id)][7] = response['CPUload']
-            r5 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][
-                        2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
-            response = json.loads(r5.text)
-            MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
-            r7 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][
-                        2]) + "/getOS?keyphrase=" + configuration.KEYPHRASE)
-            response = json.loads(r7.text)
-            MasterVariableContainer.master.slaves[str(id)][10] = response['OS']
-            r6 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][
-                        2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
-            response = json.loads(r6.text)
-            MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
-            r8 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + str(
-                    MasterVariableContainer.master.slaves[id][
-                        2]) + "/getIOWait?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
-            response = json.loads(r8.text)
-            MasterVariableContainer.master.slaves[str(id)][13] = response['IOWait']
-
+#            r2 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][2]) + "/getMemory?keyphrase=" + configuration.KEYPHRASE)
+#            response = json.loads(r2.text)
+#            MasterVariableContainer.master.slaves[str(id)][5] = response['Memory']
+#            r3 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][2]) + "/getCPU?keyphrase=" + configuration.KEYPHRASE)
+#            response = json.loads(r3.text)
+#            MasterVariableContainer.master.slaves[str(id)][6] = response['CPU']
+#            r4 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][2]) + "/getCPUload?keyphrase=" + configuration.KEYPHRASE)
+#            response = json.loads(r4.text)
+#            MasterVariableContainer.master.slaves[str(id)][7] = response['CPUload']
+#            r5 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][
+#                        2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
+#            response = json.loads(r5.text)
+#            MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
+#            r7 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][
+#                        2]) + "/getOS?keyphrase=" + configuration.KEYPHRASE)
+#            response = json.loads(r7.text)
+#            MasterVariableContainer.master.slaves[str(id)][10] = response['OS']
+#            r6 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][
+#                        2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
+#            response = json.loads(r6.text)
+#            MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
+#            r8 = requests.get(
+#                "http://" + MasterVariableContainer.master.host + ":" + str(
+#                    MasterVariableContainer.master.slaves[id][
+#                        2]) + "/getIOWait?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
+#            response = json.loads(r8.text)
+#            MasterVariableContainer.master.slaves[str(id)][13] = response['IOWait']
+#
         except requests.exceptions.RequestException as e:
             #del MasterVariableContainer.master.slaves[id]
             pass
@@ -744,4 +745,34 @@ def resall_fct():
             else:
                 resource = MasterVariableContainer.master.res_all(ram, cpu, disk, configuration.DEFAULT_K)
                 return jsonify({"Resource Allocation Function": resource})
+    return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/sendRes", methods=["GET","POST"])
+def send_res():
+    # print(request.args)
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    cpuload = request.args.get('CPUload', type=str)
+    cpupct = request.args.get('CPUpct', type=str)
+    ram = request.args.get('ram', type=str)
+    disk = request.args.get('disk', type=str)
+    k = request.args.get('k', type=str)
+    id = request.args.get('id', type=str)
+    memory = request.args.get('memory')
+    diskusage = request.args.get('diskusage')
+    temp = request.args.get('temp')
+    oss = request.args.get('os')
+    iowait = request.args.get('iowait')
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.slaves[str(id)][5] = memory
+        MasterVariableContainer.master.slaves[str(id)][6] = cpupct
+        MasterVariableContainer.master.slaves[str(id)][7] = cpuload
+        MasterVariableContainer.master.slaves[str(id)][8] = diskusage
+        MasterVariableContainer.master.slaves[str(id)][9] = temp
+        MasterVariableContainer.master.slaves[str(id)][10] = oss
+        MasterVariableContainer.master.slaves[str(id)][13] = iowait
+        return jsonify({"Saved": memory})
     return jsonify({"Error": {}})

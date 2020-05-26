@@ -773,6 +773,8 @@ class Master:
         configuration.MAX_RAM = 0
         for slave in all_slaves:
             ram = self.slaves[slave][5][0]
+            print(slave)
+            print(configuration.MAX_RAM)
             if ram > configuration.MAX_RAM:
                 configuration.MAX_RAM = ram
         MasterVariableContainer.master.check_slaves()

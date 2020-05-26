@@ -40,6 +40,10 @@ class Slave:
         self.CPUpct = None
         self.CPUload = None
         self.ping = None
+        self.diskusage = None
+        self.temp = None
+        self.os = None
+        self.iowait = None
 
         self.filters = {}
 
@@ -150,4 +154,17 @@ class Slave:
         return disk
 
     def get_networkping(self):
-        ping()
+        #ping = ping()
+        return None
+
+    def get_resources(self):
+        self.os = self.get_OS()
+        self.temp = self.get_temperature(self.os)
+        self.diskusage = self.get_disk_usage()
+        self.memory = self.get_memory()
+        self.CPUload = self.get_load()
+        self.CPUpct = self.get_CPU()
+        self.iowait = self.get_iowait(self.os)
+        return {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload,
+                "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
+
