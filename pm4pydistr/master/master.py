@@ -723,7 +723,7 @@ class Master:
         # print(configuration.MAX_RAM)
         for slave in all_slaves:
             slave_ram = self.slaves[slave][5][1]
-            slave_ram = slave_ram / configuration.MAX_RAM
+            slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             self.slaves[slave][11][0] = slave_ram
 
@@ -734,9 +734,12 @@ class Master:
 
         for slave in all_slaves:
             load1 = self.slaves[slave][7][0]
-            load5 = self.slaves[slave][7][1]
-            temp = self.slaves[slave][9]
-            usage = self.slaves[slave][6] / 100
+            print(self.slaves[slave][7])
+            print(load1)
+            print(type(load1))
+            load5 = int(self.slaves[slave][7][1])
+            temp = float(self.slaves[slave][9])
+            usage = float(self.slaves[slave][6]) / 100
             if load1 > 1.1:
                 hload = 0
             elif load5 != 0:

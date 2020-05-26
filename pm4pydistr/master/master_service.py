@@ -765,14 +765,14 @@ def send_res():
     temp = request.args.get('temp')
     oss = request.args.get('os')
     iowait = request.args.get('iowait')
-
+    #print(json.loads(cpuload))
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[str(id)][5] = memory
-        MasterVariableContainer.master.slaves[str(id)][6] = cpupct
-        MasterVariableContainer.master.slaves[str(id)][7] = cpuload
-        MasterVariableContainer.master.slaves[str(id)][8] = diskusage
-        MasterVariableContainer.master.slaves[str(id)][9] = temp
-        MasterVariableContainer.master.slaves[str(id)][10] = oss
-        MasterVariableContainer.master.slaves[str(id)][13] = iowait
+        MasterVariableContainer.master.slaves[str(id)][5] = json.loads(memory)
+        MasterVariableContainer.master.slaves[str(id)][6] = eval(cpupct)
+        MasterVariableContainer.master.slaves[str(id)][7] = json.loads(cpuload)
+        MasterVariableContainer.master.slaves[str(id)][8] = json.loads(diskusage)
+        MasterVariableContainer.master.slaves[str(id)][9] = eval(temp)
+        MasterVariableContainer.master.slaves[str(id)][10] = int(oss)
+        MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
         return jsonify({"Saved": memory})
     return jsonify({"Error": {}})

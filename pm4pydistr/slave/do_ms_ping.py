@@ -47,7 +47,7 @@ class DoMasterPing(Thread):
             self.temp = data['temp']
             self.os = data['os']
             self.iowait = data['iowait']
-            print(str(self.memory))
+            #print(str(self.memory))
 
             uri2 = "http://" + self.master_host + ":" + self.master_port + "/sendRes?id=" + str(self.id) + "&conf=" + str(self.conf) + "&port=" + str(self.port) + "&keyphrase=" + configuration.KEYPHRASE + "&memory=" + str(self.memory) + "&CPUpct=" + str(self.CPUpct) + "&CPUload=" + str(self.CPUload) + "&diskusage=" + str(self.diskusage) + "&temp=" + str(self.temp) + "&os=" + str(self.os) + "&iowait=" + str(self.iowait)
             r2 = requests.get(uri2)
