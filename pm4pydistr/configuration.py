@@ -38,3 +38,5 @@ SESSION_EXPIRATION = 70
 MAX_RAM = 16000000000
 MAX_T_JUNCTION = 100
 DEFAULT_K = 10
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

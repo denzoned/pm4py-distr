@@ -1,6 +1,6 @@
 from threading import Thread
 from pm4pydistr import configuration
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, flash, redirect, url_for
 from flask_cors import CORS
 from pm4pydistr.slave.variable_container import SlaveVariableContainer
 from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
@@ -10,6 +10,8 @@ from pm4py.objects.log.util import xes
 from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS, DEFAULT_MAX_NO_RET_ITEMS
 
 from pm4pydistr.log_handlers import parquet as parquet_handler
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
 
 import os
 import json
@@ -624,6 +626,7 @@ def get_temp():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getOS", methods=["GET"])
 def get_OS():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -634,6 +637,7 @@ def get_OS():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getDiskUsage", methods=["GET"])
 def get_diskusage():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -643,6 +647,7 @@ def get_diskusage():
         return jsonify({"Disk Usage": points})
 
     return jsonify({})
+
 
 @SlaveSocketListener.app.route("/getIOWait", methods=["GET"])
 def get_iowait():
@@ -655,6 +660,7 @@ def get_iowait():
 
     return jsonify({})
 
+
 @SlaveSocketListener.app.route("/getResources", methods=["GET"])
 def get_resources():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -665,4 +671,3 @@ def get_resources():
         return jsonify(points)
 
     return jsonify({})
-

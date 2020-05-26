@@ -155,6 +155,17 @@ class Master:
 
             MasterVariableContainer.slave_loading_requested = True
 
+    def get_best_slave(self):
+        all_slaves =  list(self.slaves.keys())
+
+        for slave in all_slaves:
+            MasterVariableContainer.master.slaves[slave]
+
+    def send_init_dfg(self):
+        if MasterVariableContainer.init_dfg_calc:
+            #m = MasterAssignRequest(None, slave_host, slave_port, False, 100000, dictio)
+            i = 0
+
     def set_filter(self, session, process, data, use_transition, no_samples):
         all_slaves = list(self.slaves.keys())
 
@@ -189,6 +200,7 @@ class Master:
             overall_dfg = overall_dfg + Counter(thread.content['dfg'])
 
         self.init_dfg = overall_dfg
+        MasterVariableContainer.init_dfg_calc = True
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -699,15 +711,14 @@ class Master:
 
     def simple_imd(self, session, process, use_transition, no_samples, attribute):
         # get DFG
-        r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
-        # r = requests.get(uri)
-        dfg = jsonify(r)
+        #r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
+        dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
         # apply_dfg(dict(r), None, False, start, end)
 
         # return str(dfg)
-        return dict(r)
+        return {"start": start, "end": end}
 
         # apply DFG on IMD
         # apply_dfg()
@@ -734,12 +745,9 @@ class Master:
 
         for slave in all_slaves:
             load1 = self.slaves[slave][7][0]
-            print(self.slaves[slave][7])
-            print(load1)
-            print(type(load1))
-            load5 = int(self.slaves[slave][7][1])
-            temp = float(self.slaves[slave][9])
-            usage = float(self.slaves[slave][6]) / 100
+            load5 = self.slaves[slave][7][1]
+            temp = self.slaves[slave][9]
+            usage = self.slaves[slave][6] / 100
             if load1 > 1.1:
                 hload = 0
             elif load5 != 0:
@@ -776,8 +784,8 @@ class Master:
         configuration.MAX_RAM = 0
         for slave in all_slaves:
             ram = self.slaves[slave][5][0]
-            print(slave)
-            print(configuration.MAX_RAM)
+            #print(slave)
+            #print(configuration.MAX_RAM)
             if ram > configuration.MAX_RAM:
                 configuration.MAX_RAM = ram
         MasterVariableContainer.master.check_slaves()

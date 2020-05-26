@@ -629,8 +629,8 @@ def simple_IMD():
         discoverimdfb = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
                                                                   attribute_key)
         # return discoverimdfb
-        return discoverimdfb
-    return jsonify({"Process Tree": {}})
+        return jsonify({"Process Tree": discoverimdfb})
+    return jsonify({"Error": {}})
 
 
 @MasterSocketListener.app.route("/distributedIMD", methods=["GET"])
@@ -776,3 +776,15 @@ def send_res():
         MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
         return jsonify({"Saved": memory})
     return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/sendInitialDFG", methods=["GET"])
+def send_init_dfg():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.check_slaves()
+        MasterVariableContainer.master.do_assignment()
+        MasterVariableContainer.master.make_slaves_load()
+
+    return jsonify({})
