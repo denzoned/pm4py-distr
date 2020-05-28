@@ -49,6 +49,7 @@ def synchronize_files():
         except:
             json_content = json.loads(request.data.decode('utf-8'))
         for log_folder in json_content["logs"]:
+            # print(log_folder)
             SlaveVariableContainer.managed_logs[log_folder] = None
             SlaveVariableContainer.managed_logs[log_folder] = []
 
@@ -57,6 +58,28 @@ def synchronize_files():
             for log_name in json_content["logs"][log_folder]:
                 SlaveVariableContainer.slave.load_log(log_folder, log_name)
                 SlaveVariableContainer.managed_logs[log_folder].append(log_name)
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/sendDFG", methods=["POST", "GET"])
+def send_dfg():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        #try:
+        #    json_content = json.loads(request.data)
+        #except:
+        #    json_content = json.loads(request.data.decode('utf-8'))
+        json_content = request.json
+        folder = "dfg-folder"
+        # TODO give dfg some version
+        print(type(json_content))
+        filename = str(json_content["origin"]) + "dfg.json"
+        SlaveVariableContainer.managed_dfgs[folder] = []
+        if folder not in os.listdir(SlaveVariableContainer.conf):
+            SlaveVariableContainer.slave.create_folder(folder)
+        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+        #print(json_content)
+        SlaveVariableContainer.managed_dfgs[folder].append(filename)
     return jsonify({})
 
 

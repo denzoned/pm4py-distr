@@ -1,3 +1,4 @@
+import json
 import math
 import os
 from collections import Counter
@@ -41,7 +42,7 @@ from pm4pydistr.master.rqsts.sa_request import SaRequest
 from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.master.variable_container import MasterVariableContainer
-
+from pm4pydistr.master.rqsts.init_calc_request import InitCalcRequest
 
 class Master:
     def __init__(self, parameters):
@@ -66,7 +67,7 @@ class Master:
         self.session_checker = SessionChecker(self)
         self.session_checker.start()
 
-        self.init_dfg = Counter()
+        self.init_dfg = {}
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -157,14 +158,24 @@ class Master:
 
     def get_best_slave(self):
         all_slaves =  list(self.slaves.keys())
-
+        i = 0
         for slave in all_slaves:
-            MasterVariableContainer.master.slaves[slave]
+            if MasterVariableContainer.master.slaves[slave][12] > i:
+                i = MasterVariableContainer.master.slaves[slave][12]
+                MasterVariableContainer.best_slave = slave
 
     def send_init_dfg(self):
         if MasterVariableContainer.init_dfg_calc:
-            #m = MasterAssignRequest(None, slave_host, slave_port, False, 100000, dictio)
-            i = 0
+            MasterVariableContainer.master.get_best_slave()
+            slave = MasterVariableContainer.best_slave
+            slave_host = MasterVariableContainer.master.slaves[slave][1]
+            slave_port = MasterVariableContainer.master.slaves[slave][2]
+
+            m = InitCalcRequest(None, slave_host, slave_port, False, 100000, MasterVariableContainer.master.init_dfg)
+            m.start()
+
+            MasterVariableContainer.assign_request_threads.append(m)
+        return MasterVariableContainer.best_slave
 
     def set_filter(self, session, process, data, use_transition, no_samples):
         all_slaves = list(self.slaves.keys())
@@ -199,7 +210,14 @@ class Master:
 
             overall_dfg = overall_dfg + Counter(thread.content['dfg'])
 
-        self.init_dfg = overall_dfg
+        self.init_dfg.update({"dfg": dict(overall_dfg)})
+        self.init_dfg.update({'depth': 0})
+        self.init_dfg.update({'origin': self.conf})
+
+        # print(self.init_dfg)
+        #dfg = json.dumps(self.init_dfg)
+        with open("masterdfg.json", "w") as write_file:
+            json.dump(self.init_dfg, write_file)
         MasterVariableContainer.init_dfg_calc = True
         return overall_dfg
 
@@ -724,10 +742,10 @@ class Master:
         # apply_dfg()
 
     def distr_imd(self, session, process, use_transition, no_samples, attribute):
-        # get DFG
-        r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
-
-        return r
+        # send dfg to currently best slave
+        bestSlave = MasterVariableContainer.master.send_init_dfg()
+        # wait for return from bestSlave, i.e. if process tree calc check if it is the right slave
+        return None
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())

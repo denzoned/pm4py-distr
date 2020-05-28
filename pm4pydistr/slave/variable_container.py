@@ -9,3 +9,4 @@ class SlaveVariableContainer:
     cpupct = None
     cpuload = None
     managed_logs = {}
+    managed_dfgs = {}

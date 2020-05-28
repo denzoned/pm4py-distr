@@ -1,6 +1,12 @@
 pm4py
 requests
 Flask
-flask-cors
-netifaces
 psutil
+
+setuptools
+wmi
+pythonping
+werkzeug
+numpy
+pyarrow
+pandas

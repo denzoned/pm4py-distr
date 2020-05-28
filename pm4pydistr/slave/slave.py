@@ -1,3 +1,5 @@
+import json
+
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
     PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST
 
@@ -46,6 +48,7 @@ class Slave:
         self.iowait = None
 
         self.filters = {}
+        self.dfg = {}
 
         if not os.path.exists(self.conf):
             os.mkdir(self.conf)
@@ -69,11 +72,21 @@ class Slave:
                 if folder_name in os.listdir(folder):
                     list_paths = parquet_importer.get_list_parquet(os.path.join(folder, folder_name))
                     list_paths_corr = {}
+                    # print(list_paths)
                     for x in list_paths:
                         list_paths_corr[Path(x).name] = x
                     if log_name in list_paths_corr:
                         # print("log_name",log_name," in ",os.path.join(folder, folder_name),list_paths_corr[log_name])
                         shutil.copyfile(list_paths_corr[log_name], os.path.join(self.conf, folder_name, log_name))
+
+    def load_dfg(self, folder_name, dfg_name, dfg):
+        if not os.path.exists(os.path.join(self.conf, folder_name, dfg_name)):
+            with open(os.path.join(self.conf, folder_name, dfg_name), "w") as write_file:
+                json.dump(dfg, write_file)
+                print("done")
+                    #print(dfg)
+                    #print(folder)
+                    #shutil.copyfile(dfg, os.path.join(self.conf, folder_name, dfg_name))
 
     def enable_ping_of_master(self):
         self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port, self.pid,

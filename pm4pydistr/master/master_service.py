@@ -94,47 +94,6 @@ def ping_from_slave():
             # response_list = ping('8.8.8.8', size=40, count=10)
             # pinged = response_list.rtt_avg_ms
             MasterVariableContainer.master.slaves[id][3] = time()
-            # MasterVariableContainer.master.slaves[id][7] = pinged
-#            r2 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][2]) + "/getMemory?keyphrase=" + configuration.KEYPHRASE)
-#            response = json.loads(r2.text)
-#            MasterVariableContainer.master.slaves[str(id)][5] = response['Memory']
-#            r3 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][2]) + "/getCPU?keyphrase=" + configuration.KEYPHRASE)
-#            response = json.loads(r3.text)
-#            MasterVariableContainer.master.slaves[str(id)][6] = response['CPU']
-#            r4 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][2]) + "/getCPUload?keyphrase=" + configuration.KEYPHRASE)
-#            response = json.loads(r4.text)
-#            MasterVariableContainer.master.slaves[str(id)][7] = response['CPUload']
-#            r5 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][
-#                        2]) + "/getDiskUsage?keyphrase=" + configuration.KEYPHRASE)
-#            response = json.loads(r5.text)
-#            MasterVariableContainer.master.slaves[str(id)][8] = response['Disk Usage']
-#            r7 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][
-#                        2]) + "/getOS?keyphrase=" + configuration.KEYPHRASE)
-#            response = json.loads(r7.text)
-#            MasterVariableContainer.master.slaves[str(id)][10] = response['OS']
-#            r6 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][
-#                        2]) + "/getTemperature?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
-#            response = json.loads(r6.text)
-#            MasterVariableContainer.master.slaves[str(id)][9] = response['Temperature']
-#            r8 = requests.get(
-#                "http://" + MasterVariableContainer.master.host + ":" + str(
-#                    MasterVariableContainer.master.slaves[id][
-#                        2]) + "/getIOWait?keyphrase=" + configuration.KEYPHRASE + "&operatingsystem=" + str(MasterVariableContainer.master.slaves[id][10]))
-#            response = json.loads(r8.text)
-#            MasterVariableContainer.master.slaves[str(id)][13] = response['IOWait']
-#
         except requests.exceptions.RequestException as e:
             #del MasterVariableContainer.master.slaves[id]
             pass
@@ -783,8 +742,6 @@ def send_init_dfg():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.check_slaves()
-        MasterVariableContainer.master.do_assignment()
-        MasterVariableContainer.master.make_slaves_load()
+        MasterVariableContainer.master.send_init_dfg()
 
     return jsonify({})
