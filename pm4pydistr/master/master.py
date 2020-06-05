@@ -15,7 +15,7 @@ import wmi
 import sys
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4py.util import points_subset
-from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
+# from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
 
 from pm4pydistr import configuration
 from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
@@ -157,14 +157,15 @@ class Master:
             MasterVariableContainer.slave_loading_requested = True
 
     def get_best_slave(self):
-        all_slaves =  list(self.slaves.keys())
+        all_slaves = list(self.slaves.keys())
         i = 0
         for slave in all_slaves:
             if MasterVariableContainer.master.slaves[slave][12] > i:
                 i = MasterVariableContainer.master.slaves[slave][12]
                 MasterVariableContainer.best_slave = slave
 
-    def send_init_dfg(self):
+    @staticmethod
+    def send_init_dfg():
         if MasterVariableContainer.init_dfg_calc:
             MasterVariableContainer.master.get_best_slave()
             slave = MasterVariableContainer.best_slave
@@ -217,8 +218,9 @@ class Master:
         # print(self.init_dfg)
         #dfg = json.dumps(self.init_dfg)
         with open("masterdfg.json", "w") as write_file:
-            json.dump(self.init_dfg, write_file)
+            json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
+
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -729,7 +731,7 @@ class Master:
 
     def simple_imd(self, session, process, use_transition, no_samples, attribute):
         # get DFG
-        #r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
+        # r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
         dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
@@ -743,7 +745,8 @@ class Master:
 
     def distr_imd(self, session, process, use_transition, no_samples, attribute):
         # send dfg to currently best slave
-        bestSlave = MasterVariableContainer.master.send_init_dfg()
+        MasterVariableContainer.master.send_init_dfg()
+        clean_dfg = MasterVariableContainer.master.select_dfg()
         # wait for return from bestSlave, i.e. if process tree calc check if it is the right slave
         return None
 
@@ -751,12 +754,27 @@ class Master:
         all_slaves = list(self.slaves.keys())
         # print(configuration.MAX_RAM)
         for slave in all_slaves:
+            #print(self.slaves[slave][5])
+            #print(self.slaves[slave][5][1])
+            #print(type(self.slaves[slave][5][1]))
             slave_ram = self.slaves[slave][5][1]
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             self.slaves[slave][11][0] = slave_ram
 
         return str(slave_ram)
+
+    @staticmethod
+    def select_dfg():
+        newdfg = {}
+        with open("masterdfg.json", "r") as write_file:
+            dfg = json.load(write_file)
+            dfg = dfg['dfg']
+            for s in dfg:
+                newkey = tuple(str(s).split('@@'))
+                newdfg[newkey] = dfg[s]
+                print(newdfg)
+                return newdfg
 
     def res_cpu(self):
         all_slaves = list(self.slaves.keys())
