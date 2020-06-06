@@ -88,6 +88,18 @@ class Slave:
                     #print(folder)
                     #shutil.copyfile(dfg, os.path.join(self.conf, folder_name, dfg_name))
 
+    def select_dfg(self, folder_name, dfg_name, dfg):
+        newdfg = {}
+        if not os.path.exists(os.path.join(self.conf, folder_name, dfg_name)):
+            with open(os.path.join(self.conf, folder_name, dfg_name), "r") as read_file:
+                dfg = json.load(read_file)
+                dfg = dfg['dfg']
+                for s in dfg:
+                    newkey = tuple(str(s).split('@@'))
+                    newdfg[newkey] = dfg[s]
+                    print(newdfg)
+                    return newdfg
+
     def enable_ping_of_master(self):
         self.ping_module = DoMasterPing(self, self.conf, self.id, self.master_host, self.master_port, self.pid,
                                         self.host, self.port)

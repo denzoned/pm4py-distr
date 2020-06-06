@@ -588,7 +588,7 @@ def simple_IMD():
         discoverimdfb = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
                                                                   attribute_key)
         # return discoverimdfb
-        return jsonify({"Process Tree": discoverimdfb})
+        return jsonify({"Computed": "Done"})
     return jsonify({"Error": {}})
 
 
