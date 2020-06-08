@@ -13,9 +13,10 @@ import pythoncom
 import requests
 import wmi
 import sys
+import re
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4py.util import points_subset
-from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
+# from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
 
 from pm4pydistr import configuration
 from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
@@ -43,6 +44,10 @@ from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.master.variable_container import MasterVariableContainer
 from pm4pydistr.master.rqsts.init_calc_request import InitCalcRequest
+from pm4py.algo.discovery.inductive import factory as apply_inductive
+from pm4py.algo.discovery.inductive.versions.dfg.data_structures import subtree
+from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
+from pm4py.objects.dfg.utils.dfg_utils import get_outgoing_edges
 
 class Master:
     def __init__(self, parameters):
@@ -157,14 +162,15 @@ class Master:
             MasterVariableContainer.slave_loading_requested = True
 
     def get_best_slave(self):
-        all_slaves =  list(self.slaves.keys())
+        all_slaves = list(self.slaves.keys())
         i = 0
         for slave in all_slaves:
             if MasterVariableContainer.master.slaves[slave][12] > i:
                 i = MasterVariableContainer.master.slaves[slave][12]
                 MasterVariableContainer.best_slave = slave
 
-    def send_init_dfg(self):
+    @staticmethod
+    def send_init_dfg():
         if MasterVariableContainer.init_dfg_calc:
             MasterVariableContainer.master.get_best_slave()
             slave = MasterVariableContainer.best_slave
@@ -217,8 +223,9 @@ class Master:
         # print(self.init_dfg)
         #dfg = json.dumps(self.init_dfg)
         with open("masterdfg.json", "w") as write_file:
-            json.dump(self.init_dfg, write_file)
+            json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
+
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -729,34 +736,81 @@ class Master:
 
     def simple_imd(self, session, process, use_transition, no_samples, attribute):
         # get DFG
-        #r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
+        # r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
         dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
         # apply_dfg(dict(r), None, False, start, end)
+        clean_dfg = MasterVariableContainer.master.select_dfg()
+        c = Counts()
+        # tree = apply_inductive.apply_dfg(clean_dfg)
+        print(clean_dfg)
+        dfg = clean_dfg
+        outgoing = {}
+        for el in dfg:
+            if type(el[0]) is str:
+                if not el[0] in outgoing:
+                    outgoing[el[0]] = {}
+                outgoing[el[0]][el[1]] = dfg[el]
+            else:
+                if not el[0][0] in outgoing:
+                    outgoing[el[0][0]] = {}
+                outgoing[el[0][0]][el[0][1]] = el[1]
+        print(outgoing)
+        print(get_outgoing_edges(clean_dfg))
 
+        s = subtree.SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
         # return str(dfg)
-        return {"start": start, "end": end}
-
+        #print(tree)
+        #return {s.dfg}
+        return 1
         # apply DFG on IMD
         # apply_dfg()
 
     def distr_imd(self, session, process, use_transition, no_samples, attribute):
         # send dfg to currently best slave
-        bestSlave = MasterVariableContainer.master.send_init_dfg()
+        MasterVariableContainer.master.send_init_dfg()
+        clean_dfg = MasterVariableContainer.master.select_dfg()
+
         # wait for return from bestSlave, i.e. if process tree calc check if it is the right slave
-        return None
+        return clean_dfg
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
         # print(configuration.MAX_RAM)
         for slave in all_slaves:
+            #print(self.slaves[slave][5])
+            #print(self.slaves[slave][5][1])
+            #print(type(self.slaves[slave][5][1]))
             slave_ram = self.slaves[slave][5][1]
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             self.slaves[slave][11][0] = slave_ram
 
         return str(slave_ram)
+
+    @staticmethod
+    def select_dfg():
+        newdfg = Counter()
+        with open("masterdfg.json", "r") as read_file:
+            dfg = json.load(read_file)
+            dfg = dfg['dfg']
+            for s in dfg:
+                # print(s)
+                newkey = s.split('@@')
+                # x = re.search("T[0-9]", newkey[0])
+                # if x:
+                #    newkey[0] = newkey[0].split(' ', 1)[1]
+                # x1 = re.search("T[0-9]", newkey[1])
+                # if x1:
+                #    newkey[1] = newkey[1].split(' ', 1)[1]
+                dfgtuple = (str(newkey[0]), str(newkey[1]))
+                newdfg.update(dfgtuple)
+                newdfg[dfgtuple] = dfg[s]
+            # print(newdfg)
+            newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+            #print(newdfg)
+        return newdfg
 
     def res_cpu(self):
         all_slaves = list(self.slaves.keys())
