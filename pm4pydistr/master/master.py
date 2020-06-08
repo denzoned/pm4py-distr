@@ -44,10 +44,12 @@ from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.master.variable_container import MasterVariableContainer
 from pm4pydistr.master.rqsts.init_calc_request import InitCalcRequest
+from pm4pydistr.master.treecalc import SubtreeDFGBased
 from pm4py.algo.discovery.inductive import factory as apply_inductive
 from pm4py.algo.discovery.inductive.versions.dfg.data_structures import subtree
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
 from pm4py.objects.dfg.utils.dfg_utils import get_outgoing_edges
+from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
 
 class Master:
     def __init__(self, parameters):
@@ -219,8 +221,6 @@ class Master:
         self.init_dfg.update({"dfg": dict(overall_dfg)})
         self.init_dfg.update({'depth': 0})
         self.init_dfg.update({'origin': self.conf})
-
-        # print(self.init_dfg)
         #dfg = json.dumps(self.init_dfg)
         with open("masterdfg.json", "w") as write_file:
             json.dump(self.init_dfg, write_file, indent=4)
@@ -744,10 +744,10 @@ class Master:
         clean_dfg = MasterVariableContainer.master.select_dfg()
         c = Counts()
         # tree = apply_inductive.apply_dfg(clean_dfg)
-        print(clean_dfg)
-        dfg = clean_dfg
+        # print(clean_dfg)
+        # dfg = clean_dfg
         outgoing = {}
-        for el in dfg:
+        '''for el in dfg:
             if type(el[0]) is str:
                 if not el[0] in outgoing:
                     outgoing[el[0]] = {}
@@ -758,12 +758,14 @@ class Master:
                 outgoing[el[0][0]][el[0][1]] = el[1]
         print(outgoing)
         print(get_outgoing_edges(clean_dfg))
-
-        s = subtree.SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+        '''
+        s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
         # return str(dfg)
         #print(tree)
         #return {s.dfg}
-        return 1
+        #print(s)
+        tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        return tree_repr
         # apply DFG on IMD
         # apply_dfg()
 
@@ -809,8 +811,12 @@ class Master:
                 newdfg[dfgtuple] = dfg[s]
             # print(newdfg)
             newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
-            #print(newdfg)
-        return newdfg
+            dfglist = []
+            for key, value in newdfg.items():
+                temp = [key, value]
+                dfglist.append(temp)
+            print(dfglist)
+        return dfglist
 
     def res_cpu(self):
         all_slaves = list(self.slaves.keys())

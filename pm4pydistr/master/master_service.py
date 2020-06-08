@@ -585,10 +585,10 @@ def simple_IMD():
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
 
     if keyphrase == configuration.KEYPHRASE:
-        discoverimdfb = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
+        discoverimdfc = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
                                                                   attribute_key)
         # return discoverimdfb
-        return jsonify({"Computed": "Done"})
+        return jsonify({"Computed": str(discoverimdfc)})
     return jsonify({"Error": {}})
 
 
