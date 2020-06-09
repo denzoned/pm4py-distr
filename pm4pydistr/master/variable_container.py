@@ -6,6 +6,7 @@ class MasterVariableContainer:
     log_assignment_done = False
     slave_loading_requested = False
     assign_request_threads = []
+    assign_dfg_request_threads = []
     init_dfg_calc = False
     best_slave = 0
     ram_multiplier = 1

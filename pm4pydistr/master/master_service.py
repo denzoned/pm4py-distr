@@ -706,7 +706,6 @@ def resall_fct():
 
 @MasterSocketListener.app.route("/sendRes", methods=["GET","POST"])
 def send_res():
-    # print(request.args)
     keyphrase = request.args.get('keyphrase', type=str)
     process = request.args.get('process', type=str)
     session = request.args.get('session', type=str)
@@ -722,7 +721,7 @@ def send_res():
     temp = request.args.get('temp')
     oss = request.args.get('os')
     iowait = request.args.get('iowait')
-    #print(json.loads(cpuload))
+
     if keyphrase == configuration.KEYPHRASE:
         MasterVariableContainer.master.slaves[str(id)][5] = json.loads(memory)
         MasterVariableContainer.master.slaves[str(id)][6] = eval(cpupct)

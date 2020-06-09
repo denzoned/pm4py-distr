@@ -185,7 +185,7 @@ class Master:
             m = InitCalcRequest(None, slave_host, slave_port, False, 100000, MasterVariableContainer.master.init_dfg)
             m.start()
 
-            MasterVariableContainer.assign_request_threads.append(m)
+            # MasterVariableContainer.assign_request_threads.append(m)
         return MasterVariableContainer.best_slave
 
     def send_split_dfg(self, data, child):
@@ -200,7 +200,7 @@ class Master:
         slave_port = MasterVariableContainer.master.slaves[slave][2]
         m = CompDfgRequest(None, slave_host, slave_port, False, 100000, data)
         m.start()
-        MasterVariableContainer.assign_request_threads.append(m)
+        # MasterVariableContainer.assign_request_threads.append(m)
         return MasterVariableContainer.best_slave
 
     def set_filter(self, session, process, data, use_transition, no_samples):
@@ -772,7 +772,27 @@ class Master:
         c = Counts()
         s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
                                0, start, end)
-        # clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf), 0, start, end)
+        found_dfg_path = os.path.join(self.conf, "child_dfg")
+
+        # Find best slave
+        if MasterVariableContainer.init_dfg_calc:
+            MasterVariableContainer.master.get_best_slave()
+            slave = MasterVariableContainer.best_slave
+            best_host = MasterVariableContainer.master.slaves[slave][1]
+            best_port = MasterVariableContainer.master.slaves[slave][2]
+            print(MasterVariableContainer.best_slave)
+
+        # if cuts found aka child dfgs were made
+        if os.path.isdir(found_dfg_path):
+
+            for index, filename in enumerate(os.listdir(found_dfg_path)):
+                # with open(os.path.join(found_dfg_path, filename), 'r') as f:
+                fullfilepath = os.path.join(found_dfg_path, filename)
+                print(fullfilepath)
+                m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
+                m.start()
+
+                MasterVariableContainer.assign_dfg_request_threads.append(m)
         # MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave

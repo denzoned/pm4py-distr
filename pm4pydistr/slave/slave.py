@@ -84,15 +84,6 @@ class Slave:
             with open(os.path.join(self.conf, folder_name, dfg_name), "w") as write_file:
                 json.dump(dfg, write_file)
                 print("done")
-                    #print(dfg)
-                    #print(folder)
-                    #shutil.copyfile(dfg, os.path.join(self.conf, folder_name, dfg_name))
-
-    def load_dfg2(self, folder_name, dfg_name, dfg):
-        if not os.path.exists(os.path.join(self.conf, folder_name, dfg_name)):
-            with open(os.path.join(self.conf, folder_name, dfg_name), "w") as write_file:
-                json.dump(dfg, write_file)
-                print("done")
 
     def select_dfg(self, folder_name, dfg_name, dfg):
         newdfg = {}
