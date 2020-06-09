@@ -774,19 +774,19 @@ class Master:
                                0, start, end)
         found_dfg_path = os.path.join(self.conf, "child_dfg")
 
-        # Find best slave
-        if MasterVariableContainer.init_dfg_calc:
-            MasterVariableContainer.master.get_best_slave()
-            slave = MasterVariableContainer.best_slave
-            best_host = MasterVariableContainer.master.slaves[slave][1]
-            best_port = MasterVariableContainer.master.slaves[slave][2]
-            print(MasterVariableContainer.best_slave)
-
         # if cuts found aka child dfgs were made
         if os.path.isdir(found_dfg_path):
 
             for index, filename in enumerate(os.listdir(found_dfg_path)):
-                # with open(os.path.join(found_dfg_path, filename), 'r') as f:
+                # Find best slave
+                if MasterVariableContainer.init_dfg_calc:
+                    MasterVariableContainer.master.get_best_slave()
+                    slave = MasterVariableContainer.best_slave
+                    best_host = MasterVariableContainer.master.slaves[slave][1]
+                    best_port = MasterVariableContainer.master.slaves[slave][2]
+                    print(MasterVariableContainer.best_slave)
+
+                # Send saved dfg file to best slave
                 fullfilepath = os.path.join(found_dfg_path, filename)
                 print(fullfilepath)
                 m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
