@@ -87,13 +87,21 @@ def send_dfg():
 def send_dfg2():
     keyphrase = request.args.get('keyphrase', type=str)
     if keyphrase == configuration.KEYPHRASE:
-        for filename, file in request.FILES.iteritems():
-            name = request.FILES[filename].name
+        folder = "dfg-folder"
+        SlaveVariableContainer.managed_dfgs[folder] = []
+        if folder not in os.listdir(SlaveVariableContainer.conf):
+            SlaveVariableContainer.slave.create_folder(folder)
+        for index, file in request.FILES.iteritems():
+            filename = request.FILES[index].name
+            print(index)
+            filepath = os.path.join(folder, filename)
+            print(filename)
             # file.read()
-            infile = open(filename, 'rb')
+            infile = open(filepath, 'rb')
             dfg = pickle.load(infile)
             infile.close()
-            print(str(dfg))
+            SlaveVariableContainer.managed_dfgs[folder].append(filename)
+            print(filepath)
     # TODO send return
     return jsonify({})
 

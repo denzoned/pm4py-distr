@@ -770,7 +770,9 @@ class Master:
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
         c = Counts()
-        s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+        s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
+                               0, start, end)
+        # clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf), 0, start, end)
         # MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave
