@@ -602,10 +602,10 @@ def distr_IMD():
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
     if keyphrase == configuration.KEYPHRASE:
-        discoverimdfb = MasterVariableContainer.master.distr_imd(session, process, use_transition, no_samples,
+        discoverimdfc = MasterVariableContainer.master.distr_imd(session, process, use_transition, no_samples,
                                                                  attribute_key)
-        return jsonify({"Computed": "Done"})
-    return jsonify({"Process Tree": {}})
+        return jsonify({"Computed": str(discoverimdfc)})
+    return jsonify({"Error": {}})
 
 
 @MasterSocketListener.app.route("/RAMfunction", methods=["GET"])
@@ -743,3 +743,4 @@ def send_init_dfg():
         MasterVariableContainer.master.send_init_dfg()
 
     return jsonify({})
+

@@ -15,6 +15,7 @@ from flask import send_from_directory
 
 import os
 import json
+import pickle
 
 import logging
 
@@ -80,6 +81,20 @@ def send_dfg():
         SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
         # print(json_content)
         SlaveVariableContainer.managed_dfgs[folder].append(filename)
+    return jsonify({})
+
+@SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])
+def send_dfg2():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        for filename, file in request.FILES.iteritems():
+            name = request.FILES[filename].name
+            # file.read()
+            infile = open(filename, 'rb')
+            dfg = pickle.load(infile)
+            infile.close()
+            print(str(dfg))
+    # TODO send return
     return jsonify({})
 
 

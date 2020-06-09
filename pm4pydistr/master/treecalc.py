@@ -125,7 +125,6 @@ class SubtreeDFGBased():
 
         self.initial_dfg = initial_dfg
         self.outgoing = get_outgoing_edges(self.dfg)
-        #print('outgoing for dfg done')
         self.ingoing = get_ingoing_edges(self.dfg)
         self.self_loop_activities = get_activities_self_loop(self.dfg)
         self.initial_outgoing = get_outgoing_edges(self.initial_dfg)

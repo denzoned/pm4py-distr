@@ -13,6 +13,7 @@ import pythoncom
 import requests
 import wmi
 import sys
+import pickle
 import re
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4py.util import points_subset
@@ -44,7 +45,9 @@ from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.master.variable_container import MasterVariableContainer
 from pm4pydistr.master.rqsts.init_calc_request import InitCalcRequest
+from pm4pydistr.master.rqsts.comp_dfg_request import CompDfgRequest
 from pm4pydistr.master.treecalc import SubtreeDFGBased
+from pm4pydistr.master.treecalcone import SubtreeDFGBasedOne
 from pm4py.algo.discovery.inductive import factory as apply_inductive
 from pm4py.algo.discovery.inductive.versions.dfg.data_structures import subtree
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
@@ -183,6 +186,21 @@ class Master:
             m.start()
 
             MasterVariableContainer.assign_request_threads.append(m)
+        return MasterVariableContainer.best_slave
+
+    def send_split_dfg(self, data, child):
+        # pickle_out = open("dfg" + str(child) + ".pickle", "wb")
+        # filepath = pickle_out.name
+        # print(pickle_out.name)
+        # pickle.dump(data, pickle_out)
+        # pickle_out.close()
+        MasterVariableContainer.master.get_best_slave()
+        slave = MasterVariableContainer.best_slave
+        slave_host = MasterVariableContainer.master.slaves[slave][1]
+        slave_port = MasterVariableContainer.master.slaves[slave][2]
+        m = CompDfgRequest(None, slave_host, slave_port, False, 100000, data)
+        m.start()
+        MasterVariableContainer.assign_request_threads.append(m)
         return MasterVariableContainer.best_slave
 
     def set_filter(self, session, process, data, use_transition, no_samples):
@@ -340,12 +358,10 @@ class Master:
             m.start()
 
             threads.append(m)
-
         overall_sa = Counter()
 
         for thread in threads:
             thread.join()
-
             overall_sa = overall_sa + Counter(thread.content['start_activities'])
 
         return overall_sa
@@ -736,34 +752,12 @@ class Master:
 
     def simple_imd(self, session, process, use_transition, no_samples, attribute):
         # get DFG
-        # r = self.calculate_dfg(session, process, use_transition, no_samples, attribute)
         dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
-        # apply_dfg(dict(r), None, False, start, end)
         clean_dfg = MasterVariableContainer.master.select_dfg()
         c = Counts()
-        # tree = apply_inductive.apply_dfg(clean_dfg)
-        # print(clean_dfg)
-        # dfg = clean_dfg
-        outgoing = {}
-        '''for el in dfg:
-            if type(el[0]) is str:
-                if not el[0] in outgoing:
-                    outgoing[el[0]] = {}
-                outgoing[el[0]][el[1]] = dfg[el]
-            else:
-                if not el[0][0] in outgoing:
-                    outgoing[el[0][0]] = {}
-                outgoing[el[0][0]][el[0][1]] = el[1]
-        print(outgoing)
-        print(get_outgoing_edges(clean_dfg))
-        '''
         s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
-        # return str(dfg)
-        #print(tree)
-        #return {s.dfg}
-        #print(s)
         tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
         return tree_repr
         # apply DFG on IMD
@@ -771,11 +765,25 @@ class Master:
 
     def distr_imd(self, session, process, use_transition, no_samples, attribute):
         # send dfg to currently best slave
-        MasterVariableContainer.master.send_init_dfg()
+        # MasterVariableContainer.master.send_init_dfg()
         clean_dfg = MasterVariableContainer.master.select_dfg()
+        start = self.get_start_activities(session, process, use_transition, no_samples)
+        end = self.get_end_activities(session, process, use_transition, no_samples)
+        c = Counts()
+        s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+        # MasterVariableContainer.master.send_split_dfg(s, 'm1')
+        # get all children
+        # loop send each children to one slave
+        #for i in s.child_names:
+            # filename = "0" + self.cut_name + str(i)
+            # self.send_split_dfg()
+        # wait for return from slaves
 
-        # wait for return from bestSlave, i.e. if process tree calc check if it is the right slave
-        return clean_dfg
+        #merge the results
+
+        tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        return tree_repr
+
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
@@ -815,7 +823,7 @@ class Master:
             for key, value in newdfg.items():
                 temp = [key, value]
                 dfglist.append(temp)
-            print(dfglist)
+            # print(dfglist)
         return dfglist
 
     def res_cpu(self):
