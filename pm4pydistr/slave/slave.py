@@ -65,6 +65,11 @@ class Slave:
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
 
+    def remove_folder(self):
+        # print("create folder " + str(folder_name))
+        if os.path.isdir(os.path.join(self.conf)):
+            shutil.rmtree(self.conf)
+
     def load_log(self, folder_name, log_name):
         # print("loading log " + str(log_name)+" into "+str(folder_name))
         if not os.path.exists(os.path.join(self.conf, folder_name, log_name)):

@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import threading
 
 import requests
 from random import randrange
@@ -95,7 +96,7 @@ def ping_from_slave():
             # pinged = response_list.rtt_avg_ms
             MasterVariableContainer.master.slaves[id][3] = time()
         except requests.exceptions.RequestException as e:
-            #del MasterVariableContainer.master.slaves[id]
+            # del MasterVariableContainer.master.slaves[id]
             pass
 
         return jsonify({"id": id})
@@ -642,10 +643,31 @@ def initialize():
     # do_all set 1 to calcDFG, 0 only log assignment
     doall = request.args.get('doall', type=int)
 
+    # cet set 1 to remove old files in slaves
+    clean = request.args.get('clean', type=int)
+
     if keyphrase == configuration.KEYPHRASE:
-        init = MasterVariableContainer.master.master_init(session, process, use_transition, no_samples, attribute_key,
-                                                          doall)
-        return jsonify({"Initialization": init})
+        thread = threading.Thread(target=MasterVariableContainer.master.master_init(session, process, use_transition, no_samples, attribute_key, doall, clean))
+        thread.start()
+        thread.join()
+        print('remove done')
+        threads = []
+        m1 = threading.Thread(target=MasterVariableContainer.master.check_slaves())
+        m1.start()
+        m1.join()
+        m2 = threading.Thread(target=MasterVariableContainer.master.do_assignment())
+        m2.start()
+        m2.join()
+        m3 = threading.Thread(target=MasterVariableContainer.master.make_slaves_load())
+        m3.start()
+        m3.join()
+        if doall is 1:
+            print('now calc')
+            if MasterVariableContainer.log_assignment_done is True and MasterVariableContainer.slave_loading_requested is True:
+                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
+                                                             attribute_key)
+
+        return jsonify({"Initialization": 'done'})
     return jsonify({"Wrong Keyphrase": {}})
 
 
@@ -704,7 +726,8 @@ def resall_fct():
                 return jsonify({"Resource Allocation Function": resource})
     return jsonify({"Error": {}})
 
-@MasterSocketListener.app.route("/sendRes", methods=["GET","POST"])
+
+@MasterSocketListener.app.route("/sendRes", methods=["GET", "POST"])
 def send_res():
     keyphrase = request.args.get('keyphrase', type=str)
     process = request.args.get('process', type=str)
@@ -732,14 +755,3 @@ def send_res():
         MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
         return jsonify({"Saved": memory})
     return jsonify({"Error": {}})
-
-
-@MasterSocketListener.app.route("/sendInitialDFG", methods=["GET"])
-def send_init_dfg():
-    keyphrase = request.args.get('keyphrase', type=str)
-
-    if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.send_init_dfg()
-
-    return jsonify({})
-

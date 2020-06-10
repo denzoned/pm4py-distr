@@ -1,3 +1,5 @@
+import shutil
+import threading
 from threading import Thread
 from pm4pydistr import configuration
 from flask import Flask, request, jsonify, flash, redirect, url_for
@@ -50,10 +52,11 @@ def synchronize_files():
         except:
             json_content = json.loads(request.data.decode('utf-8'))
         for log_folder in json_content["logs"]:
-            # print(log_folder)
             SlaveVariableContainer.managed_logs[log_folder] = None
             SlaveVariableContainer.managed_logs[log_folder] = []
 
+            if not os.path.isdir(SlaveVariableContainer.conf):
+                os.mkdir(os.path.join(SlaveVariableContainer.conf))
             if log_folder not in os.listdir(SlaveVariableContainer.conf):
                 SlaveVariableContainer.slave.create_folder(log_folder)
             for log_name in json_content["logs"][log_folder]:
@@ -93,18 +96,24 @@ def send_dfg2():
         if folder not in os.listdir(SlaveVariableContainer.conf):
             SlaveVariableContainer.slave.create_folder(folder)
         for filename, file in request.files.items():
-            print(filename)
-            print('line 97')
             filepath = os.path.join(SlaveVariableContainer.conf, folder, filename)
-            print(filepath)
             file.save(filepath)
-            print(str(filename) + " saved")
+            print(str(filepath) + " saved")
 
         # TODO find cut on received pickle
 
         # TODO send return
     return jsonify({})
 
+@SlaveSocketListener.app.route("/removeOldFiles", methods=["GET"])
+def remove_files():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        m = threading.Thread(target=SlaveVariableContainer.slave.remove_folder())
+        m.start()
+        m.join()
+        return jsonify({'Folder': 'removed'})
+    return jsonify({})
 
 @SlaveSocketListener.app.route("/setFilters", methods=["POST"])
 def set_filters():

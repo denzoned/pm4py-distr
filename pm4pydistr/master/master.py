@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import time
 from collections import Counter
 from pathlib import Path
 from random import randrange
@@ -44,15 +45,13 @@ from pm4pydistr.master.rqsts.sa_request import SaRequest
 from pm4pydistr.master.rqsts.variants import VariantsRequest
 from pm4pydistr.master.session_checker import SessionChecker
 from pm4pydistr.master.variable_container import MasterVariableContainer
-from pm4pydistr.master.rqsts.init_calc_request import InitCalcRequest
 from pm4pydistr.master.rqsts.comp_dfg_request import CompDfgRequest
 from pm4pydistr.master.treecalc import SubtreeDFGBased
 from pm4pydistr.master.treecalcone import SubtreeDFGBasedOne
-from pm4py.algo.discovery.inductive import factory as apply_inductive
-from pm4py.algo.discovery.inductive.versions.dfg.data_structures import subtree
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
-from pm4py.objects.dfg.utils.dfg_utils import get_outgoing_edges
 from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
+from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
+
 
 class Master:
     def __init__(self, parameters):
@@ -174,20 +173,6 @@ class Master:
                 i = MasterVariableContainer.master.slaves[slave][12]
                 MasterVariableContainer.best_slave = slave
 
-    @staticmethod
-    def send_init_dfg():
-        if MasterVariableContainer.init_dfg_calc:
-            MasterVariableContainer.master.get_best_slave()
-            slave = MasterVariableContainer.best_slave
-            slave_host = MasterVariableContainer.master.slaves[slave][1]
-            slave_port = MasterVariableContainer.master.slaves[slave][2]
-
-            m = InitCalcRequest(None, slave_host, slave_port, False, 100000, MasterVariableContainer.master.init_dfg)
-            m.start()
-
-            # MasterVariableContainer.assign_request_threads.append(m)
-        return MasterVariableContainer.best_slave
-
     def send_split_dfg(self, data, child):
         # pickle_out = open("dfg" + str(child) + ".pickle", "wb")
         # filepath = pickle_out.name
@@ -239,7 +224,7 @@ class Master:
         self.init_dfg.update({"dfg": dict(overall_dfg)})
         self.init_dfg.update({'depth': 0})
         self.init_dfg.update({'origin': self.conf})
-        #dfg = json.dumps(self.init_dfg)
+        # dfg = json.dumps(self.init_dfg)
         with open("masterdfg.json", "w") as write_file:
             json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
@@ -796,24 +781,23 @@ class Master:
         # MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave
-        #for i in s.child_names:
-            # filename = "0" + self.cut_name + str(i)
-            # self.send_split_dfg()
+        # for i in s.child_names:
+        # filename = "0" + self.cut_name + str(i)
+        # self.send_split_dfg()
         # wait for return from slaves
 
-        #merge the results
+        # merge the results
 
         tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
         return tree_repr
-
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
         # print(configuration.MAX_RAM)
         for slave in all_slaves:
-            #print(self.slaves[slave][5])
-            #print(self.slaves[slave][5][1])
-            #print(type(self.slaves[slave][5][1]))
+            # print(self.slaves[slave][5])
+            # print(self.slaves[slave][5][1])
+            # print(type(self.slaves[slave][5][1]))
             slave_ram = self.slaves[slave][5][1]
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
@@ -886,22 +870,30 @@ class Master:
             self.slaves[slave][11][2] = h_io
         return freedisk
 
-    def master_init(self, session, process, use_transition, no_samples, attribute_key, doall):
+    def master_init(self, session, process, use_transition, no_samples, attribute_key, doall, clean):
         # Get configuration values
         all_slaves = list(self.slaves.keys())
         configuration.MAX_RAM = 0
+        threads = []
         for slave in all_slaves:
             ram = self.slaves[slave][5][0]
-            #print(slave)
-            #print(configuration.MAX_RAM)
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
             if ram > configuration.MAX_RAM:
                 configuration.MAX_RAM = ram
-        MasterVariableContainer.master.check_slaves()
-        MasterVariableContainer.master.do_assignment()
-        MasterVariableContainer.master.make_slaves_load()
-        if doall == 1:
-            MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
-                                                         attribute_key)
+            if clean == 1:
+                m = RemFileRequest(None, slave_host, slave_port, False, 100000,
+                                   MasterVariableContainer.master.init_dfg)
+                m.start()
+                m.join()
+#        MasterVariableContainer.master.check_slaves()
+#         MasterVariableContainer.master.do_assignment()
+#         MasterVariableContainer.master.make_slaves_load()
+        # if doall == 1:
+        #     if MasterVariableContainer.log_assignment_done == True and MasterVariableContainer.slave_loading_requested == True:
+        #         MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
+        #                                              attribute_key)
+
         return None
 
     def res_all(self, ram, cpu, disk, k):
