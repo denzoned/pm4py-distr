@@ -1,7 +1,10 @@
+import json
+import os
+
 from pm4py.objects.dfg.utils.dfg_utils import get_all_activities_connected_as_input_to_activity
 from pm4py.objects.dfg.utils.dfg_utils import get_all_activities_connected_as_output_to_activity
-from pm4py.objects.dfg.utils.dfg_utils import infer_end_activities, get_ingoing_edges, get_outgoing_edges, get_activities_from_dfg
-from pm4py.objects.dfg.utils.dfg_utils import infer_start_activities, infer_end_activities
+from pm4py.objects.dfg.utils.dfg_utils import get_ingoing_edges, get_outgoing_edges, get_activities_from_dfg
+from pm4py.objects.dfg.utils.dfg_utils import infer_start_activities, infer_end_activities, filter_dfg_on_act
 import pm4pydistr.discovery.imd.detection_utils as detection_utils
 import networkx as nx
 
@@ -142,8 +145,20 @@ def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_in
 
     return [False, []]
 
+def save_cut(dfg, parent_name, cut_name, position, conf, process):
+    json_dfg = {}
+    json_dfg.update({"dfg": dfg})
+    # json_dfg.update({"depth": 0})
+    file_name = str(parent_name) + str(cut_name) + str(position) + ".json"
+    folder_name = "child_dfg"
+    if not os.path.isdir(os.path.join(conf, process, folder_name)):
+        os.mkdir(os.path.join(conf, process, folder_name))
+    with open(os.path.join(conf, process, folder_name, file_name), "w") as write_file:
+        json.dump(json_dfg, write_file, indent=4)
+        print(file_name)
+        write_file.close()
 
-def detect_cut(dfg):
+def detect_cut(dfg, parent, conf, process):
     """
     Detect generally a cut in the graph (applying all the algorithms)
     """
@@ -160,9 +175,10 @@ def detect_cut(dfg):
         if xor_cut[0]:
             found_cut = "xor"
             print(found_cut)
-            for comp in xor_cut[1]:
+            for index, comp in enumerate(xor_cut[1]):
                 print(comp)
-                # child_dfg = filter_dfg_on_act(self.dfg, comp)
+                filter_dfg_on_act(dfg, comp)
+                save_cut(dfg, parent, found_cut, index, conf, process)
         else:
             this_nx_graph = detection_utils.transform_dfg_to_directed_nx_graph(activities, dfg)
             strongly_connected_components = [list(x) for x in nx.strongly_connected_components(this_nx_graph)]
@@ -170,46 +186,49 @@ def detect_cut(dfg):
             if seq_cut[0]:
                 found_cut = "seq"
                 print(found_cut)
-                for comp in seq_cut[1]:
+                for index, comp in enumerate(seq_cut[1]):
                     print(comp)
+                    filter_dfg_on_act(dfg, comp)
+                    save_cut(dfg, parent, found_cut, index, conf, process)
                 # self.put_skips_in_seq_cut()?
             else:
                 par_cut = detect_parallel_cut(this_nx_graph, strongly_connected_components, )
                 if par_cut[0]:
                     found_cut = "par"
                     print(found_cut)
-                    for comp in par_cut[1]:
+                    for index, comp in enumerate(par_cut[1]):
                         print(comp)
+                        filter_dfg_on_act(dfg, comp)
+                        save_cut(dfg, parent, found_cut, index, conf, process)
                 else:
                     # Do not know if start_activities really needed
                     start_activities = infer_start_activities(dfg)
-                    print('Start activities')
-                    for s in start_activities:
-                        print(s)
-                    end_activities= infer_end_activities(dfg)
-                    print('End activities')
-                    for s in end_activities:
-                        print(s)
+                    end_activities = infer_end_activities(dfg)
                     loop_cut = detect_loop_cut(dfg, activities, start_activities, end_activities)
                     if loop_cut[0]:
                         if loop_cut[2]:
                             found_cut = "loop"
                             print(found_cut)
-                            for comp in loop_cut[1]:
+                            for index, comp in enumerate(loop_cut[1]):
                                 print(comp)
+                                filter_dfg_on_act(dfg, comp)
+                                save_cut(dfg, parent, found_cut, index, conf, process)
                                 # if loop_cut[3]:
                                 #   insert_skip
                         else:
                             found_cut = "seq"
                             print('seq 2')
                             # self.need_loop_on_subtree = True
-                            for comp  in loop_cut[1]:
+                            for index, comp in enumerate(loop_cut[1]):
                                 print(comp)
+                                filter_dfg_on_act(dfg, comp)
+                                save_cut(dfg, parent, found_cut, index, conf, process)
                                 #insert_skip
                     else:
                         pass
                     found_cut = "flower"
                     print(found_cut)
+                    save_cut(dfg, parent, found_cut, 0, conf, process)
         return found_cut
     else:
         return "base_xor"

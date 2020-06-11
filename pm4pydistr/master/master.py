@@ -215,10 +215,11 @@ class Master:
             overall_dfg = overall_dfg + Counter(thread.content['dfg'])
 
         self.init_dfg.update({"dfg": dict(overall_dfg)})
-        self.init_dfg.update({'depth': 0})
-        self.init_dfg.update({'origin': self.conf})
-        # dfg = json.dumps(self.init_dfg)
-        with open("masterdfg.json", "w") as write_file:
+
+        folder_name = str(process)
+        if not os.path.isdir(os.path.join(self.conf, folder_name)):
+            os.mkdir(os.path.join(self.conf, folder_name))
+        with open(os.path.join(self.conf, folder_name, "masterdfg.json"), "w") as write_file:
             json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
 
@@ -733,7 +734,7 @@ class Master:
         dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
-        clean_dfg = MasterVariableContainer.master.select_dfg()
+        clean_dfg = MasterVariableContainer.master.select_dfg(self.conf, process)
         c = Counts()
         s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
         tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
@@ -741,41 +742,51 @@ class Master:
         # apply DFG on IMD
         # apply_dfg()
 
-    def distr_imd(self, session, process, use_transition, no_samples, attribute):
-        # send dfg to currently best slave
-        # MasterVariableContainer.master.send_init_dfg()
-        clean_dfg = MasterVariableContainer.master.select_dfg()
-        cut = cut_detection.detect_cut(clean_dfg)
-        print(cut)
-        return cut
-        # start = self.get_start_activities(session, process, use_transition, no_samples)
-        # end = self.get_end_activities(session, process, use_transition, no_samples)
-        # # c = Counts()
-        # # s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
-        # #                        0, start, end)
-        # found_dfg_path = os.path.join(self.conf, "child_dfg")
-        # print('created child dfg folder')
-        # # if cuts found aka child dfgs were made
-        # if os.path.isdir(found_dfg_path):
-        #     for index, filename in enumerate(os.listdir(found_dfg_path)):
-        #         # Find best slave
-        #         # TODO remove slave dynamically if chosen
-        #         # TODO get_best_slave should return a list
-        #         if MasterVariableContainer.init_dfg_calc:
-        #             MasterVariableContainer.master.get_best_slave()
-        #             slave = MasterVariableContainer.best_slave
-        #             best_host = MasterVariableContainer.master.slaves[slave][1]
-        #             best_port = MasterVariableContainer.master.slaves[slave][2]
-        #             print(MasterVariableContainer.best_slave)
-        #
-        #         # Send saved dfg file to best slave
-        #         fullfilepath = os.path.join(found_dfg_path, filename)
-        #         print(fullfilepath)
-        #         m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
-        #         m.start()
-        #
-        #         MasterVariableContainer.assign_dfg_request_threads.append(m)
-        # MasterVariableContainer.master.send_split_dfg(s, 'm1')
+    def distr_imd(self, process):
+        """
+        This is the initial method for the inductive miner, all slaves will receive a modified version of this,
+        as the first master_dfg is different
+
+        :param process: used Process
+        :return:
+        """
+        # TODO change for slave this part
+        if MasterVariableContainer.init_dfg_calc and os.path.exists(os.path.join(self.conf, process)):
+            clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process)
+        else:
+            print("No DFG")
+            return None
+
+
+        # cut detection
+        cut = cut_detection.detect_cut(clean_dfg, "m", self.conf, process)
+
+        # TODO remove slave dynamically if chosen
+
+        # TODO get_best_slave should return a list
+
+        return "IMD Done"
+
+        if os.path.isdir(found_dfg_path):
+            for index, filename in enumerate(os.listdir(found_dfg_path)):
+                # Find best slave
+                # TODO remove slave dynamically if chosen
+                # TODO get_best_slave should return a list
+                if MasterVariableContainer.init_dfg_calc:
+                    MasterVariableContainer.master.get_best_slave()
+                    slave = MasterVariableContainer.best_slave
+                    best_host = MasterVariableContainer.master.slaves[slave][1]
+                    best_port = MasterVariableContainer.master.slaves[slave][2]
+                    print(MasterVariableContainer.best_slave)
+
+                # Send saved dfg file to best slave
+                fullfilepath = os.path.join(found_dfg_path, filename)
+                print(fullfilepath)
+                m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
+                m.start()
+
+                MasterVariableContainer.assign_dfg_request_threads.append(m)
+        MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave
         # for i in s.child_names:
@@ -799,27 +810,30 @@ class Master:
         return str(slave_ram)
 
     @staticmethod
-    def select_dfg():
+    def select_dfg(conf, process):
         newdfg = Counter()
-        with open("masterdfg.json", "r") as read_file:
-            dfg = json.load(read_file)
-            dfg = dfg['dfg']
-            for s in dfg:
-                newkey = s.split('@@')
-                # x = re.search("T[0-9]", newkey[0])
-                # if x:
-                #    newkey[0] = newkey[0].split(' ', 1)[1]
-                # x1 = re.search("T[0-9]", newkey[1])
-                # if x1:
-                #    newkey[1] = newkey[1].split(' ', 1)[1]
-                dfgtuple = (str(newkey[0]), str(newkey[1]))
-                newdfg.update(dfgtuple)
-                newdfg[dfgtuple] = dfg[s]
-            newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
-            dfglist = []
-            for key, value in newdfg.items():
-                temp = [key, value]
-                dfglist.append(temp)
+        filename = "masterdfg.json"
+        if os.path.exists(os.path.join(conf, process, filename)):
+            with open(os.path.join(conf, process, filename), "r") as read_file:
+                dfg = json.load(read_file)
+                dfg = dfg['dfg']
+                for s in dfg:
+                    newkey = s.split('@@')
+                    # x = re.search("T[0-9]", newkey[0])
+                    # if x:
+                    #    newkey[0] = newkey[0].split(' ', 1)[1]
+                    # x1 = re.search("T[0-9]", newkey[1])
+                    # if x1:
+                    #    newkey[1] = newkey[1].split(' ', 1)[1]
+                    dfgtuple = (str(newkey[0]), str(newkey[1]))
+                    newdfg.update(dfgtuple)
+                    newdfg[dfgtuple] = dfg[s]
+                newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+                dfglist = []
+                for key, value in newdfg.items():
+                    temp = [key, value]
+                    dfglist.append(temp)
+            print(dfglist)
         return dfglist
 
     def res_cpu(self):
