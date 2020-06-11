@@ -643,7 +643,7 @@ def initialize():
     # do_all set 1 to calcDFG, 0 only log assignment
     doall = request.args.get('doall', type=int)
 
-    # cet set 1 to remove old files in slaves
+    # clean set 1 to remove old files in slaves
     clean = request.args.get('clean', type=int)
 
     if keyphrase == configuration.KEYPHRASE:
@@ -652,8 +652,10 @@ def initialize():
                                                               attribute_key, doall, clean))
         thread.start()
         thread.join()
-        print('remove done')
-        threads = []
+        if clean == 1:
+            print('Max RAM calc & folder removement done')
+        else:
+            print('Max RAM calc')
         m1 = threading.Thread(target=MasterVariableContainer.master.check_slaves())
         m1.start()
         m1.join()

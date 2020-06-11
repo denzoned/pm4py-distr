@@ -51,7 +51,7 @@ from pm4pydistr.master.treecalcone import SubtreeDFGBasedOne
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
 from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
 from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
-
+from pm4pydistr.discovery.imd import cut_detection
 
 class Master:
     def __init__(self, parameters):
@@ -745,31 +745,36 @@ class Master:
         # send dfg to currently best slave
         # MasterVariableContainer.master.send_init_dfg()
         clean_dfg = MasterVariableContainer.master.select_dfg()
-        start = self.get_start_activities(session, process, use_transition, no_samples)
-        end = self.get_end_activities(session, process, use_transition, no_samples)
-        c = Counts()
-        s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
-                               0, start, end)
-        found_dfg_path = os.path.join(self.conf, "child_dfg")
-        print('created child dfg folder')
-        # if cuts found aka child dfgs were made
-        if os.path.isdir(found_dfg_path):
-            for index, filename in enumerate(os.listdir(found_dfg_path)):
-                # Find best slave
-                if MasterVariableContainer.init_dfg_calc:
-                    MasterVariableContainer.master.get_best_slave()
-                    slave = MasterVariableContainer.best_slave
-                    best_host = MasterVariableContainer.master.slaves[slave][1]
-                    best_port = MasterVariableContainer.master.slaves[slave][2]
-                    print(MasterVariableContainer.best_slave)
-
-                # Send saved dfg file to best slave
-                fullfilepath = os.path.join(found_dfg_path, filename)
-                print(fullfilepath)
-                m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
-                m.start()
-
-                MasterVariableContainer.assign_dfg_request_threads.append(m)
+        cut = cut_detection.detect_cut(clean_dfg)
+        print(cut)
+        return cut
+        # start = self.get_start_activities(session, process, use_transition, no_samples)
+        # end = self.get_end_activities(session, process, use_transition, no_samples)
+        # # c = Counts()
+        # # s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
+        # #                        0, start, end)
+        # found_dfg_path = os.path.join(self.conf, "child_dfg")
+        # print('created child dfg folder')
+        # # if cuts found aka child dfgs were made
+        # if os.path.isdir(found_dfg_path):
+        #     for index, filename in enumerate(os.listdir(found_dfg_path)):
+        #         # Find best slave
+        #         # TODO remove slave dynamically if chosen
+        #         # TODO get_best_slave should return a list
+        #         if MasterVariableContainer.init_dfg_calc:
+        #             MasterVariableContainer.master.get_best_slave()
+        #             slave = MasterVariableContainer.best_slave
+        #             best_host = MasterVariableContainer.master.slaves[slave][1]
+        #             best_port = MasterVariableContainer.master.slaves[slave][2]
+        #             print(MasterVariableContainer.best_slave)
+        #
+        #         # Send saved dfg file to best slave
+        #         fullfilepath = os.path.join(found_dfg_path, filename)
+        #         print(fullfilepath)
+        #         m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
+        #         m.start()
+        #
+        #         MasterVariableContainer.assign_dfg_request_threads.append(m)
         # MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave
@@ -780,8 +785,8 @@ class Master:
 
         # merge the results
 
-        tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
-        return tree_repr
+        # tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        # return tree_repr
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
