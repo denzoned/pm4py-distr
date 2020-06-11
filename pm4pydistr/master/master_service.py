@@ -647,7 +647,9 @@ def initialize():
     clean = request.args.get('clean', type=int)
 
     if keyphrase == configuration.KEYPHRASE:
-        thread = threading.Thread(target=MasterVariableContainer.master.master_init(session, process, use_transition, no_samples, attribute_key, doall, clean))
+        thread = threading.Thread(
+            target=MasterVariableContainer.master.master_init(session, process, use_transition, no_samples,
+                                                              attribute_key, doall, clean))
         thread.start()
         thread.join()
         print('remove done')
@@ -655,18 +657,25 @@ def initialize():
         m1 = threading.Thread(target=MasterVariableContainer.master.check_slaves())
         m1.start()
         m1.join()
+        print('slaves checked')
         m2 = threading.Thread(target=MasterVariableContainer.master.do_assignment())
         m2.start()
         m2.join()
+        print('assignment done')
         m3 = threading.Thread(target=MasterVariableContainer.master.make_slaves_load())
         m3.start()
         m3.join()
+        print('slaves loaded')
         if doall is 1:
-            print('now calc')
+            print('DFG calculating')
+            print(MasterVariableContainer.log_assignment_done)
+            print(MasterVariableContainer.slave_loading_requested)
             if MasterVariableContainer.log_assignment_done is True and MasterVariableContainer.slave_loading_requested is True:
-                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
-                                                             attribute_key)
-
+                #m4 = threading.Thread(
+                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples, attribute_key)
+                # m4.start()
+                #m4.join()
+                print('DFG calculated')
         return jsonify({"Initialization": 'done'})
     return jsonify({"Wrong Keyphrase": {}})
 

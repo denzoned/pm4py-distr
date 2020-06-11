@@ -61,7 +61,6 @@ class Slave:
         self.slave_requests.register_to_webservice()
 
     def create_folder(self, folder_name):
-        # print("create folder " + str(folder_name))
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
 

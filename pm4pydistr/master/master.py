@@ -127,13 +127,10 @@ class Master:
 
         for slave in all_slaves:
             check = False
-            # if slave.get_current_PID_info() != slave:
-            #    MasterVariableContainer.log_assignment_done = False
-            PID1 = str(self.slaves[slave][4])
-            # return PID1
+            pid1 = str(self.slaves[slave][4])
             for pid2 in self.get_running_processes():
                 # return str(pid2["pid"])
-                if str(PID1) == str(pid2["pid"]):
+                if str(pid1) == str(pid2["pid"]):
                     check = True
             if check == False:
                 del MasterVariableContainer.master.slaves[slave]
@@ -160,7 +157,8 @@ class Master:
 
                 m = MasterAssignRequest(None, slave_host, slave_port, False, 100000, dictio)
                 m.start()
-
+                m.join()
+                print(str(self.slaves[slave][0])+' loaded')
                 MasterVariableContainer.assign_request_threads.append(m)
 
             MasterVariableContainer.slave_loading_requested = True
@@ -174,11 +172,6 @@ class Master:
                 MasterVariableContainer.best_slave = slave
 
     def send_split_dfg(self, data, child):
-        # pickle_out = open("dfg" + str(child) + ".pickle", "wb")
-        # filepath = pickle_out.name
-        # print(pickle_out.name)
-        # pickle.dump(data, pickle_out)
-        # pickle_out.close()
         MasterVariableContainer.master.get_best_slave()
         slave = MasterVariableContainer.best_slave
         slave_host = MasterVariableContainer.master.slaves[slave][1]
@@ -758,10 +751,9 @@ class Master:
         s = SubtreeDFGBasedOne(clean_dfg, clean_dfg, clean_dfg, None, c, 0, str(self.conf),
                                0, start, end)
         found_dfg_path = os.path.join(self.conf, "child_dfg")
-
+        print('created child dfg folder')
         # if cuts found aka child dfgs were made
         if os.path.isdir(found_dfg_path):
-
             for index, filename in enumerate(os.listdir(found_dfg_path)):
                 # Find best slave
                 if MasterVariableContainer.init_dfg_calc:
@@ -793,11 +785,7 @@ class Master:
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
-        # print(configuration.MAX_RAM)
         for slave in all_slaves:
-            # print(self.slaves[slave][5])
-            # print(self.slaves[slave][5][1])
-            # print(type(self.slaves[slave][5][1]))
             slave_ram = self.slaves[slave][5][1]
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
@@ -812,7 +800,6 @@ class Master:
             dfg = json.load(read_file)
             dfg = dfg['dfg']
             for s in dfg:
-                # print(s)
                 newkey = s.split('@@')
                 # x = re.search("T[0-9]", newkey[0])
                 # if x:
@@ -823,13 +810,11 @@ class Master:
                 dfgtuple = (str(newkey[0]), str(newkey[1]))
                 newdfg.update(dfgtuple)
                 newdfg[dfgtuple] = dfg[s]
-            # print(newdfg)
             newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
             dfglist = []
             for key, value in newdfg.items():
                 temp = [key, value]
                 dfglist.append(temp)
-            # print(dfglist)
         return dfglist
 
     def res_cpu(self):
@@ -858,8 +843,6 @@ class Master:
     def res_disk(self):
         all_slaves = list(self.slaves.keys())
         maxdfg = sys.getsizeof(self.init_dfg)
-        # print(self.init_dfg)
-        # print(maxdfg)
         for slave in all_slaves:
             freedisk = self.slaves[slave][8][1]
             iowait = self.slaves[slave][13]
@@ -884,6 +867,8 @@ class Master:
             if clean == 1:
                 m = RemFileRequest(None, slave_host, slave_port, False, 100000,
                                    MasterVariableContainer.master.init_dfg)
+                MasterVariableContainer.log_assignment_done = False
+                MasterVariableContainer.slave_loading_requested = False
                 m.start()
                 m.join()
 #        MasterVariableContainer.master.check_slaves()

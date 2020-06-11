@@ -26,7 +26,6 @@ class ChildDFG():
 
     def create_file(self):
         folder_name = "child_dfg"
-        print(folder_name + " at " + self.conf)
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
 
