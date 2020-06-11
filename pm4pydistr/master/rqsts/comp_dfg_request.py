@@ -16,8 +16,9 @@ class CompDfgRequest(BasicMasterRequest):
         BasicMasterRequest.__init__(self, None, target_host, target_port, use_transition, no_samples, content)
 
     def run(self):
-        uri = "http://"+self.target_host+":"+self.target_port+"/sendDFG2?keyphrase="+KEYPHRASE
+        uri = "http://"+self.target_host+":"+self.target_port+"/sendDFG?keyphrase="+KEYPHRASE
         # Might check if it works on bigger files
-        files = {os.path.basename(self.content): open(str(self.content), 'rb')}
-        r = requests.post(uri, files=files)
+        with open(self.content) as f:
+            data = json.load(f)
+        r = requests.post(uri, json=data)
         return r.status_code

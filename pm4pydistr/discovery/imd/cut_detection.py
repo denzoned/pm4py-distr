@@ -148,9 +148,10 @@ def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_in
 def save_cut(dfg, parent_name, cut_name, position, conf, process):
     json_dfg = {}
     json_dfg.update({"dfg": dfg})
-    # json_dfg.update({"depth": 0})
     file_name = str(parent_name) + str(cut_name) + str(position) + ".json"
     folder_name = "child_dfg"
+
+    json_dfg.update({"name": file_name})
     if not os.path.isdir(os.path.join(conf, process, folder_name)):
         os.mkdir(os.path.join(conf, process, folder_name))
     with open(os.path.join(conf, process, folder_name, file_name), "w") as write_file:

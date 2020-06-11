@@ -74,10 +74,10 @@ def send_dfg():
         #except:
         #    json_content = json.loads(request.data.decode('utf-8'))
         json_content = request.json
-        folder = "dfg-folder"
+        folder = "received"
         # TODO give dfg some version
         # print(type(json_content))
-        filename = str(json_content["origin"]) + "dfg.json"
+        filename = str(json_content["name"])
         SlaveVariableContainer.managed_dfgs[folder] = []
         if folder not in os.listdir(SlaveVariableContainer.conf):
             SlaveVariableContainer.slave.create_folder(folder)

@@ -751,12 +751,13 @@ class Master:
         :return:
         """
         # TODO change for slave this part
+        all_childs_received = False
+
         if MasterVariableContainer.init_dfg_calc and os.path.exists(os.path.join(self.conf, process)):
             clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process)
         else:
             print("No DFG")
             return None
-
 
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, "m", self.conf, process)
@@ -765,28 +766,20 @@ class Master:
 
         # TODO get_best_slave should return a list
 
+        for index, filename in enumerate(os.listdir(os.path.join(self.conf, process, "child_dfg"))):
+            MasterVariableContainer.master.get_best_slave()
+            slave = MasterVariableContainer.best_slave
+            best_host = MasterVariableContainer.master.slaves[slave][1]
+            best_port = MasterVariableContainer.master.slaves[slave][2]
+            print(MasterVariableContainer.best_slave)
+            fullfilepath = os.path.join(self.conf, process, "child_dfg", filename)
+            print(fullfilepath)
+            m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
+            m.start()
+            MasterVariableContainer.assign_dfg_request_threads.append(m)
         return "IMD Done"
 
-        if os.path.isdir(found_dfg_path):
-            for index, filename in enumerate(os.listdir(found_dfg_path)):
-                # Find best slave
-                # TODO remove slave dynamically if chosen
-                # TODO get_best_slave should return a list
-                if MasterVariableContainer.init_dfg_calc:
-                    MasterVariableContainer.master.get_best_slave()
-                    slave = MasterVariableContainer.best_slave
-                    best_host = MasterVariableContainer.master.slaves[slave][1]
-                    best_port = MasterVariableContainer.master.slaves[slave][2]
-                    print(MasterVariableContainer.best_slave)
-
-                # Send saved dfg file to best slave
-                fullfilepath = os.path.join(found_dfg_path, filename)
-                print(fullfilepath)
-                m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
-                m.start()
-
-                MasterVariableContainer.assign_dfg_request_threads.append(m)
-        MasterVariableContainer.master.send_split_dfg(s, 'm1')
+        #    MasterVariableContainer.master.send_split_dfg(s, 'm1')
         # get all children
         # loop send each children to one slave
         # for i in s.child_names:
