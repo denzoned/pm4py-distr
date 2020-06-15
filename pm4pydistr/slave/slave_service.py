@@ -74,7 +74,7 @@ def send_dfg():
         #except:
         #    json_content = json.loads(request.data.decode('utf-8'))
         json_content = request.json
-        folder = "received"
+        folder = "parent_dfg"
         # TODO give dfg some version
         # print(type(json_content))
         filename = str(json_content["name"])
@@ -84,6 +84,7 @@ def send_dfg():
         SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
         # print(json_content)
         SlaveVariableContainer.managed_dfgs[folder].append(filename)
+        SlaveVariableContainer.slave.slave_distr(filename)
     return jsonify({})
 
 @SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])

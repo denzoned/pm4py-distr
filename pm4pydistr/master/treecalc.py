@@ -658,17 +658,13 @@ class SubtreeDFGBased():
         Detect generally a cut in the graph (applying all the algorithms)
         """
         if self.dfg:
-            # print("\n\n")
             conn_components = self.get_connected_components(self.ingoing, self.outgoing, self.activities)
             this_nx_graph = self.transform_dfg_to_directed_nx_graph()
             strongly_connected_components = [list(x) for x in nx.strongly_connected_components(this_nx_graph)]
 
-            # print("strongly_connected_components", strongly_connected_components)
-
             xor_cut = self.detect_xor_cut(conn_components, this_nx_graph, strongly_connected_components)
 
             if xor_cut[0]:
-                # print(self.rec_depth, "xor_cut", self.activities)
                 for comp in xor_cut[1]:
                     new_dfg = filter_dfg_on_act(self.dfg, comp)
                     self.detected_cut = "xor"

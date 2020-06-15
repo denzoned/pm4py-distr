@@ -1,10 +1,13 @@
 import json
+from collections import Counter
 
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
     PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST
+from pm4pydistr.discovery.imd import cut_detection
 
 from pm4pydistr.slave.slave_service import SlaveSocketListener
 from pm4pydistr.slave.slave_requests import SlaveRequests
+from pm4pydistr.slave.variable_container import SlaveVariableContainer
 from pathlib import Path
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4pydistr.slave.do_ms_ping import DoMasterPing
@@ -18,6 +21,20 @@ import shutil
 import psutil
 from pythonping import ping
 from time import time
+
+
+def decode_json_dfg(dfg):
+    newdfg = Counter()
+    for s in dfg:
+        dfgtuple = (str(s[0][0]), str(s[0][1]))
+        newdfg.update(dfgtuple)
+        newdfg[dfgtuple] = s[1]
+    newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+    dfglist = []
+    for key, value in newdfg.items():
+        temp = [key, value]
+        dfglist.append(temp)
+    return dfglist
 
 
 class Slave:
@@ -194,3 +211,17 @@ class Slave:
         return {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload,
                 "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
 
+    def slave_distr(self, filename):
+        folder = "parent_dfg"
+        print("cutting:" + filename)
+        if os.path.exists(os.path.join(self.conf, folder, filename)):
+            with open(os.path.join(self.conf, folder, filename), "r") as read_file:
+                data = json.load(read_file)
+                clean_dfg = decode_json_dfg(data["dfg"])
+                print(clean_dfg)
+                cut = cut_detection.detect_cut(clean_dfg, data["name"], self.conf, data["process"])
+                if cut == "flower":
+                    tree = ', '.join([str(elem) for elem in data["activities"]])
+                    tree = "X(" + tree + ", " + u'\u03c4' + ")"
+                    return tree
+        return None

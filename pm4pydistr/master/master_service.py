@@ -669,13 +669,8 @@ def initialize():
         print('slaves loaded')
         if doall is 1:
             print('DFG calculating')
-            print(MasterVariableContainer.log_assignment_done)
-            print(MasterVariableContainer.slave_loading_requested)
             if MasterVariableContainer.log_assignment_done is True and MasterVariableContainer.slave_loading_requested is True:
-                #m4 = threading.Thread(
                 MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples, attribute_key)
-                # m4.start()
-                #m4.join()
                 print('DFG calculated')
         return jsonify({"Initialization": 'done'})
     return jsonify({"Wrong Keyphrase": {}})

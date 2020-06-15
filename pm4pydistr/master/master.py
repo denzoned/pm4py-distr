@@ -735,6 +735,8 @@ class Master:
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
         clean_dfg = MasterVariableContainer.master.select_dfg(self.conf, process)
+        with open(os.path.join("dfg.txt"), "w") as write_file:
+            json.dump(clean_dfg, write_file)
         c = Counts()
         s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
         tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
@@ -766,13 +768,13 @@ class Master:
 
         # TODO get_best_slave should return a list
 
-        for index, filename in enumerate(os.listdir(os.path.join(self.conf, process, "child_dfg"))):
+        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
             slave = MasterVariableContainer.best_slave
             best_host = MasterVariableContainer.master.slaves[slave][1]
             best_port = MasterVariableContainer.master.slaves[slave][2]
             print(MasterVariableContainer.best_slave)
-            fullfilepath = os.path.join(self.conf, process, "child_dfg", filename)
+            fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
             print(fullfilepath)
             m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
             m.start()

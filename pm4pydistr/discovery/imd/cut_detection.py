@@ -117,7 +117,7 @@ def detect_loop_cut(dfg, activities, start_activities, end_activities):
     return [False, [], False]
 
 
-def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_ingoing, negated_outgoing, activities):
+def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_ingoing, negated_outgoing, activities, dfg, initial_start_activities, initial_end_activities):
     """
     Detects parallel cut
 
@@ -139,8 +139,8 @@ def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_in
 
     if len(conn_components) > 1:
         conn_components = detection_utils.check_par_cut(conn_components, this_nx_graph, strongly_connected_components)
-
-        if detection_utils.check_sa_ea_for_each_branch(conn_components):
+        # TODO check might be wrong
+        if detection_utils.check_sa_ea_for_each_branch(dfg, dfg, conn_components, initial_start_activities, initial_end_activities, activities):
             return [True, conn_components]
 
     return [False, []]
@@ -151,13 +151,23 @@ def save_cut(dfg, activities, parent_name, cut_name, position, conf, process):
     file_name = str(parent_name) + str(cut_name) + str(position) + ".json"
     folder_name = "child_dfg"
     json_dfg.update({"name": file_name})
-    json_dfg.update({"activities": activities})
-    if not os.path.isdir(os.path.join(conf, process, folder_name)):
-        os.mkdir(os.path.join(conf, process, folder_name))
-    with open(os.path.join(conf, process, folder_name, file_name), "w") as write_file:
+    activities_list = json.dumps(activities, default=serialize_sets)
+    json_dfg.update({"activities": activities_list})
+    json_dfg.update({"process": process})
+    if not os.path.isdir(os.path.join(conf, folder_name)):
+        os.mkdir(os.path.join(conf, folder_name))
+    if not os.path.isdir(os.path.join(conf, folder_name, process)):
+        os.mkdir(os.path.join(conf, folder_name, process))
+    with open(os.path.join(conf, folder_name, process, file_name), "w") as write_file:
         json.dump(json_dfg, write_file, indent=4)
         print(file_name)
         write_file.close()
+
+def serialize_sets(obj):
+    if isinstance(obj, set):
+        return list(obj)
+
+    return obj
 
 def detect_cut(dfg, parent, conf, process):
     """
@@ -165,7 +175,7 @@ def detect_cut(dfg, parent, conf, process):
     """
     if dfg:
         print('DFG will be cut')
-        print(dfg)
+        # print(dfg)
         # Find in order: xor, seq, par, loop, seq, flower
         ingoing = get_ingoing_edges(dfg)
         outgoing = get_outgoing_edges(dfg)
@@ -177,9 +187,9 @@ def detect_cut(dfg, parent, conf, process):
             found_cut = "xor"
             print(found_cut)
             for index, comp in enumerate(xor_cut[1]):
-                print(comp)
+                # print(comp)
                 filter_dfg_on_act(dfg, comp)
-                save_cut(dfg, parent, found_cut, index, conf, process)
+                # save_cut(dfg, parent, found_cut, index, conf, process)
         else:
             this_nx_graph = detection_utils.transform_dfg_to_directed_nx_graph(activities, dfg)
             strongly_connected_components = [list(x) for x in nx.strongly_connected_components(this_nx_graph)]
@@ -188,21 +198,26 @@ def detect_cut(dfg, parent, conf, process):
                 found_cut = "seq"
                 print(found_cut)
                 for index, comp in enumerate(seq_cut[1]):
-                    print(comp)
+                    # print(comp)
                     filter_dfg = filter_dfg_on_act(dfg, comp)
+                    print(filter_dfg)
                     save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                 # self.put_skips_in_seq_cut()?
             else:
-                par_cut = detect_parallel_cut(this_nx_graph, strongly_connected_components, )
+                negated_dfg = detection_utils.negate(dfg)
+                negated_ingoing = get_ingoing_edges(negated_dfg)
+                negated_outgoing = get_outgoing_edges(negated_dfg)
+                start_activities = infer_start_activities(dfg)
+                end_activities = infer_end_activities(dfg)
+                par_cut = detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_ingoing, negated_outgoing, activities, dfg, start_activities, end_activities)
                 if par_cut[0]:
                     found_cut = "par"
                     print(found_cut)
                     for index, comp in enumerate(par_cut[1]):
-                        print(comp)
+                        # print(comp)
                         filtter_dfg = filter_dfg_on_act(dfg, comp)
                         save_cut(filtter_dfg, comp, parent, found_cut, index, conf, process)
                 else:
-                    # Do not know if start_activities really needed
                     start_activities = infer_start_activities(dfg)
                     end_activities = infer_end_activities(dfg)
                     loop_cut = detect_loop_cut(dfg, activities, start_activities, end_activities)
@@ -211,7 +226,7 @@ def detect_cut(dfg, parent, conf, process):
                             found_cut = "loop"
                             print(found_cut)
                             for index, comp in enumerate(loop_cut[1]):
-                                print(comp)
+                                # print(comp)
                                 filter_dfg = filter_dfg_on_act(dfg, comp)
                                 save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                                 # if loop_cut[3]:
@@ -221,7 +236,7 @@ def detect_cut(dfg, parent, conf, process):
                             print('seq 2')
                             # self.need_loop_on_subtree = True
                             for index, comp in enumerate(loop_cut[1]):
-                                print(comp)
+                                # print(comp)
                                 filter_dfg = filter_dfg_on_act(dfg, comp)
                                 save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                                 #insert_skip
@@ -229,7 +244,8 @@ def detect_cut(dfg, parent, conf, process):
                         pass
                     found_cut = "flower"
                     print(found_cut)
-                    save_cut(dfg, comp, parent, found_cut, 0, conf, process)
+                    #save_cut(dfg, comp, parent, found_cut, 0, conf, process)
         return found_cut
     else:
+        print("no DFG or base_xor")
         return "base_xor"

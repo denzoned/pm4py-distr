@@ -277,3 +277,210 @@ def check_par_cut(conn_components, ingoing, outgoing):
     if len(conn_components) > 1:
         return conn_components
     return None
+
+def negate(dfg):
+    """
+    Negate relationship in the DFG graph
+
+    Parameters
+    ----------
+    dfg
+        Directly-Follows graph
+
+    Returns
+    ----------
+    negated_dfg
+        Negated Directly-Follows graph (for parallel cut detection)
+    """
+    negated_dfg = []
+
+    outgoing = get_outgoing_edges(dfg)
+
+    for el in dfg:
+        if not (el[0][1] in outgoing and el[0][0] in outgoing[el[0][1]]):
+            negated_dfg.append(el)
+
+    return negated_dfg
+
+
+def get_outgoing_edges(dfg):
+    """
+    Gets outgoing edges of the provided DFG graph
+    """
+    outgoing = {}
+    for el in dfg:
+        if type(el[0]) is str:
+            if not el[0] in outgoing:
+                outgoing[el[0]] = {}
+            outgoing[el[0]][el[1]] = dfg[el]
+        else:
+            if not el[0][0] in outgoing:
+                outgoing[el[0][0]] = {}
+            outgoing[el[0][0]][el[0][1]] = el[1]
+    return outgoing
+
+def check_sa_ea_for_each_branch(initial_dfg, dfg, conn_components, initial_start_activities, initial_end_activities, activities):
+    """
+    Checks if each branch of the parallel cut has a start
+    and an end node of the subgraph
+
+    Parameters
+    --------------
+    conn_components
+        Parallel cut
+
+    Returns
+    -------------
+    boolean
+        True if each branch of the parallel cut has a start and an end node
+    """
+    parallel_cut_sa = list(set(initial_start_activities).union(infer_start_activities_from_prev_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=False)).intersection(activities))
+    parallel_cut_ea = list(set(initial_end_activities).union(infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=False)).intersection(activities))
+
+    if conn_components is None:
+        return False
+
+    for comp in conn_components:
+        comp_sa_ok = False
+        comp_ea_ok = False
+
+        for sa in parallel_cut_sa:
+            if sa in comp:
+                comp_sa_ok = True
+                break
+        for ea in parallel_cut_ea:
+            if ea in comp:
+                comp_ea_ok = True
+                break
+
+        if not (comp_sa_ok and comp_ea_ok):
+            return False
+
+    return True
+
+def infer_start_activities_from_prev_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=True):
+    """
+    Infer the start activities from the previous connections
+
+    Parameters
+    -----------
+    initial_dfg
+        Initial DFG
+    dfg
+        Directly-follows graph
+    activities
+        List of the activities contained in DFG
+    """
+    start_activities = set()
+    for el in initial_dfg:
+        if el[0][1] in activities and not el[0][0] in activities:
+            start_activities.add(el[0][1])
+    if include_self:
+        start_activities = start_activities.union(set(infer_start_activities(dfg)))
+    return start_activities
+
+
+def infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=True):
+    """
+    Infer the end activities from the previous connections
+
+    Parameters
+    -----------
+    initial_dfg
+        Initial DFG
+    dfg
+        Directly-follows graph
+    activities
+        List of the activities contained in DFG
+    """
+    end_activities = set()
+    for el in initial_dfg:
+        if el[0][0] in activities and not el[0][1] in activities:
+            end_activities.add(el[0][0])
+    if include_self:
+        end_activities = end_activities.union(set(infer_end_activities(dfg)))
+    return end_activities
+
+def infer_start_activities(dfg):
+    """
+    Infer start activities from a Directly-Follows Graph
+
+    Parameters
+    ----------
+    dfg
+        Directly-Follows Graph
+
+    Returns
+    ----------
+    start_activities
+        Start activities in the log
+    """
+    ingoing = get_ingoing_edges(dfg)
+    outgoing = get_outgoing_edges(dfg)
+
+    start_activities = []
+
+    for act in outgoing:
+        if act not in ingoing:
+            start_activities.append(act)
+
+    return start_activities
+
+
+def infer_end_activities(dfg):
+    """
+    Infer end activities from a Directly-Follows Graph
+
+    Parameters
+    ----------
+    dfg
+        Directly-Follows Graph
+
+    Returns
+    ----------
+    end_activities
+        End activities in the log
+    """
+    ingoing = get_ingoing_edges(dfg)
+    outgoing = get_outgoing_edges(dfg)
+
+    end_activities = []
+
+    for act in ingoing:
+        if act not in outgoing:
+            end_activities.append(act)
+
+    return end_activities
+
+def get_outgoing_edges(dfg):
+    """
+    Gets outgoing edges of the provided DFG graph
+    """
+    outgoing = {}
+    for el in dfg:
+        if type(el[0]) is str:
+            if not el[0] in outgoing:
+                outgoing[el[0]] = {}
+            outgoing[el[0]][el[1]] = dfg[el]
+        else:
+            if not el[0][0] in outgoing:
+                outgoing[el[0][0]] = {}
+            outgoing[el[0][0]][el[0][1]] = el[1]
+    return outgoing
+
+
+def get_ingoing_edges(dfg):
+    """
+    Get ingoing edges of the provided DFG graph
+    """
+    ingoing = {}
+    for el in dfg:
+        if type(el[0]) is str:
+            if not el[1] in ingoing:
+                ingoing[el[1]] = {}
+            ingoing[el[1]][el[0]] = dfg[el]
+        else:
+            if not el[0][1] in ingoing:
+                ingoing[el[0][1]] = {}
+            ingoing[el[0][1]][el[0][0]] = el[1]
+    return ingoing
