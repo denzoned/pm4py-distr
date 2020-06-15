@@ -145,13 +145,13 @@ def detect_parallel_cut(this_nx_graph, strongly_connected_components, negated_in
 
     return [False, []]
 
-def save_cut(dfg, parent_name, cut_name, position, conf, process):
+def save_cut(dfg, activities, parent_name, cut_name, position, conf, process):
     json_dfg = {}
     json_dfg.update({"dfg": dfg})
     file_name = str(parent_name) + str(cut_name) + str(position) + ".json"
     folder_name = "child_dfg"
-
     json_dfg.update({"name": file_name})
+    json_dfg.update({"activities": activities})
     if not os.path.isdir(os.path.join(conf, process, folder_name)):
         os.mkdir(os.path.join(conf, process, folder_name))
     with open(os.path.join(conf, process, folder_name, file_name), "w") as write_file:
@@ -189,8 +189,8 @@ def detect_cut(dfg, parent, conf, process):
                 print(found_cut)
                 for index, comp in enumerate(seq_cut[1]):
                     print(comp)
-                    filter_dfg_on_act(dfg, comp)
-                    save_cut(dfg, parent, found_cut, index, conf, process)
+                    filter_dfg = filter_dfg_on_act(dfg, comp)
+                    save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                 # self.put_skips_in_seq_cut()?
             else:
                 par_cut = detect_parallel_cut(this_nx_graph, strongly_connected_components, )
@@ -199,8 +199,8 @@ def detect_cut(dfg, parent, conf, process):
                     print(found_cut)
                     for index, comp in enumerate(par_cut[1]):
                         print(comp)
-                        filter_dfg_on_act(dfg, comp)
-                        save_cut(dfg, parent, found_cut, index, conf, process)
+                        filtter_dfg = filter_dfg_on_act(dfg, comp)
+                        save_cut(filtter_dfg, comp, parent, found_cut, index, conf, process)
                 else:
                     # Do not know if start_activities really needed
                     start_activities = infer_start_activities(dfg)
@@ -212,8 +212,8 @@ def detect_cut(dfg, parent, conf, process):
                             print(found_cut)
                             for index, comp in enumerate(loop_cut[1]):
                                 print(comp)
-                                filter_dfg_on_act(dfg, comp)
-                                save_cut(dfg, parent, found_cut, index, conf, process)
+                                filter_dfg = filter_dfg_on_act(dfg, comp)
+                                save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                                 # if loop_cut[3]:
                                 #   insert_skip
                         else:
@@ -222,14 +222,14 @@ def detect_cut(dfg, parent, conf, process):
                             # self.need_loop_on_subtree = True
                             for index, comp in enumerate(loop_cut[1]):
                                 print(comp)
-                                filter_dfg_on_act(dfg, comp)
-                                save_cut(dfg, parent, found_cut, index, conf, process)
+                                filter_dfg = filter_dfg_on_act(dfg, comp)
+                                save_cut(filter_dfg, comp, parent, found_cut, index, conf, process)
                                 #insert_skip
                     else:
                         pass
                     found_cut = "flower"
                     print(found_cut)
-                    save_cut(dfg, parent, found_cut, 0, conf, process)
+                    save_cut(dfg, comp, parent, found_cut, 0, conf, process)
         return found_cut
     else:
         return "base_xor"
