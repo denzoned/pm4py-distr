@@ -604,8 +604,29 @@ def distr_IMD():
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
     if keyphrase == configuration.KEYPHRASE:
         discoverimdfc = MasterVariableContainer.master.distr_imd(process)
-        return jsonify({"Computed": str(discoverimdfc)})
+        return jsonify({"IMD": "started, for results go to /resultIMD"})
     return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/resultIMD", methods=["GET"])
+def result_IMD():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        if MasterVariableContainer.tree_found:
+            tree = MasterVariableContainer.master.return_tree(process)
+            return jsonify(tree)
+        return jsonify({"Tree": "not found"})
+    return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/sendTree", methods=["GET", "POST"])
+def return_tree():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        # TODO what name to save
+        tree_name = json_content["name"]
+        MasterVariableContainer.master.save_subtree("returned_tree", tree_name, json_content, process)
 
 
 @MasterSocketListener.app.route("/RAMfunction", methods=["GET"])
@@ -759,4 +780,16 @@ def send_res():
         MasterVariableContainer.master.slaves[str(id)][10] = int(oss)
         MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
         return jsonify({"Saved": memory})
+    return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/getBestSlave", methods=["GET"])
+def get_bestslave():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.get_best_slave()
+        slave = MasterVariableContainer.best_slave
+        best_host = MasterVariableContainer.master.slaves[slave][1]
+        best_port = MasterVariableContainer.master.slaves[slave][2]
+        return jsonify({"BestSlavehost": best_host, "BestSlaveport": best_port})
     return jsonify({"Error": {}})

@@ -15,6 +15,7 @@ class SlaveRequests:
         self.conf = conf
         self.id = None
         self.pid = None
+        self.content = None
 
     def register_to_webservice(self):
         r = requests.get(
@@ -40,4 +41,11 @@ class SlaveRequests:
         response = response['PID']
         return response
 
+    def get_best_slave(self):
+        r = requests.get(
+            "http://" + self.master_host + ":" + self.master_port + "/getBestSlave?keyphrase=" + configuration.KEYPHRASE)
 
+        response = json.load(r.text)
+        host = response['BestSlavehost']
+        port = response['BestSlaveport']
+        return [host, port]

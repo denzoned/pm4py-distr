@@ -76,15 +76,39 @@ def send_dfg():
         json_content = request.json
         folder = "parent_dfg"
         # TODO give dfg some version
-        # print(type(json_content))
-        filename = str(json_content["name"])
+        filename = str(json_content["name"]) + ".json"
+        if folder not in os.listdir(SlaveVariableContainer.conf):
+            SlaveVariableContainer.slave.create_folder(folder)
+        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+        # print(json_content)
+        SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+        SlaveVariableContainer.slave.slave_distr(filename)
+        # print(jsonify(tree))
+        # return jsonify({'tree': tree})
+    return jsonify({})
+
+@SlaveSocketListener.app.route("/sendTree", methods=["GET", "POST"])
+def return_tree():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        # TODO what name to save
+        tree_name = json_content["name"]
+        SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, json_content, process)
+
+@SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
+def master_dfg():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        folder = "parent_dfg"
+        filename = "masterdfg.json"
         SlaveVariableContainer.managed_dfgs[folder] = []
         if folder not in os.listdir(SlaveVariableContainer.conf):
             SlaveVariableContainer.slave.create_folder(folder)
         SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
         # print(json_content)
-        SlaveVariableContainer.managed_dfgs[folder].append(filename)
-        SlaveVariableContainer.slave.slave_distr(filename)
     return jsonify({})
 
 @SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])

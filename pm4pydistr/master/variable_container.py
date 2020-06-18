@@ -13,4 +13,6 @@ class MasterVariableContainer:
     cpu_multiplier = 1
     disk_multiplier = 1
     k_slope = 10
-
+    tree_found = False
+    found_cut = ""
+    send_dfgs = {}

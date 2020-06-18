@@ -11,6 +11,7 @@ from pm4pydistr.slave.variable_container import SlaveVariableContainer
 from pathlib import Path
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4pydistr.slave.do_ms_ping import DoMasterPing
+from pm4pydistr.slave.comp_dfg_rqst import CalcDfg
 import uuid
 import socket
 import pythoncom
@@ -19,8 +20,6 @@ import os
 from sys import platform as _platform
 import shutil
 import psutil
-from pythonping import ping
-from time import time
 
 
 def decode_json_dfg(dfg):
@@ -104,7 +103,6 @@ class Slave:
         if not os.path.exists(os.path.join(self.conf, folder_name, dfg_name)):
             with open(os.path.join(self.conf, folder_name, dfg_name), "w") as write_file:
                 json.dump(dfg, write_file)
-                print("done")
 
     def select_dfg(self, folder_name, dfg_name, dfg):
         newdfg = {}
@@ -115,7 +113,7 @@ class Slave:
                 for s in dfg:
                     newkey = tuple(str(s).split('@@'))
                     newdfg[newkey] = dfg[s]
-                    print(newdfg)
+                    # print(newdfg)
                     return newdfg
 
     def enable_ping_of_master(self):
@@ -214,14 +212,107 @@ class Slave:
     def slave_distr(self, filename):
         folder = "parent_dfg"
         print("cutting:" + filename)
-        if os.path.exists(os.path.join(self.conf, folder, filename)):
-            with open(os.path.join(self.conf, folder, filename), "r") as read_file:
-                data = json.load(read_file)
-                clean_dfg = decode_json_dfg(data["dfg"])
-                print(clean_dfg)
-                cut = cut_detection.detect_cut(clean_dfg, data["name"], self.conf, data["process"])
-                if cut == "flower":
-                    tree = ', '.join([str(elem) for elem in data["activities"]])
-                    tree = "X(" + tree + ", " + u'\u03c4' + ")"
+        if os.path.exists(os.path.join(self.conf, folder, "masterdfg.json")):
+            init_dfg = self.clean_init_dfg(self.conf, folder)
+            if os.path.exists(os.path.join(self.conf, folder, filename)):
+                with open(os.path.join(self.conf, folder, filename), "r") as read_file:
+                    data = json.load(read_file)
+                    clean_dfg = decode_json_dfg(data["dfg"])
+                    # print(clean_dfg)
+                    initial_start_activities = data["initial_start"]
+                    initial_end_activities = data["initial_end"]
+                    process = data["process"]
+                    cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"], initial_start_activities, initial_end_activities, data['activities'])
+                    tree = {}
+                    if cut == "seq":
+                        self.send_child_dfgs(process, cut)
+                        # tree = {"seq": childs}
+                    if cut == "par":
+                        self.send_child_dfgs(process, cut)
+                        # tree = {"par": childs}
+                    if cut == "loop":
+                        self.send_child_dfgs(process, cut)
+                        # tree = {"loop": childs}
+                    if cut == "seq2":
+                        self.send_child_dfgs(process, cut)
+                        #tree = {"seq": childs}
+                    if cut == "flower":
+                        # tree = ', '.join([str(elem) for elem in data["activities"]])
+                        # tree = "X(" + tree + ", " + u'\u03c4' + ")"
+                        tree = {"flower": data["activities"]}
+                    if cut == "base_xor":
+                        tree = {"base": data["activities"]}
                     return tree
         return None
+
+    def send_child_dfgs(self, process, cut):
+        threads = []
+        childs = []
+        tree = {cut: {}}
+        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
+            # Best Slave Request
+            bestslave = self.slave_requests.get_best_slave()
+            besthost = bestslave[0]
+            bestport = bestslave[1]
+            fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
+            m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+            m.start()
+
+    def save_subtree(self, folder_name, subtree_name, subtree, process):
+        if not os.path.isdir(os.path.join(self.conf, folder_name)):
+            os.mkdir(os.path.join(self.conf, folder_name))
+        if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
+            with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
+                json.dump(subtree, write_file)
+                d = MasterVariableContainer.send_dfgs
+                if not MasterVariableContainer.master.checkKey(d, process):
+                    print("No such process found")
+                    return None
+                else:
+                    MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
+        if self.check_tree(process):
+            self.result_tree(self, process)
+
+    def checkKey(dictio, key):
+        if key in dictio.keys():
+            return True
+        else:
+            return False
+
+    def check_tree(self, process):
+        d = MasterVariableContainer.send_dfgs
+        b = True
+        if MasterVariableContainer.master.checkKey(d, process):
+            for s in d[process]:
+                if d[process][s] == "send":
+                    b = False
+        if b:
+            MasterVariableContainer.tree_found = True
+        return b
+
+    @staticmethod
+    def clean_init_dfg(conf, process):
+        newdfg = Counter()
+        filename = "masterdfg.json"
+        if os.path.exists(os.path.join(conf, process, filename)):
+            with open(os.path.join(conf, process, filename), "r") as read_file:
+                dfg = json.load(read_file)
+                dfg = dfg['dfg']
+                for s in dfg:
+                    newkey = s.split('@@')
+                    # x = re.search("T[0-9]", newkey[0])
+                    # if x:
+                    #    newkey[0] = newkey[0].split(' ', 1)[1]
+                    # x1 = re.search("T[0-9]", newkey[1])
+                    # if x1:
+                    #    newkey[1] = newkey[1].split(' ', 1)[1]
+                    dfgtuple = (str(newkey[0]), str(newkey[1]))
+                    newdfg.update(dfgtuple)
+                    newdfg[dfgtuple] = dfg[s]
+                newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+                dfglist = []
+                for key, value in newdfg.items():
+                    temp = [key, value]
+                    dfglist.append(temp)
+            # print(dfglist)
+        return dfglist

@@ -52,6 +52,7 @@ from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
 from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
 from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
 from pm4pydistr.discovery.imd import cut_detection
+from pm4pydistr.master.rqsts.send_master_dfg import MasterDfgRequest
 
 class Master:
     def __init__(self, parameters):
@@ -222,6 +223,16 @@ class Master:
         with open(os.path.join(self.conf, folder_name, "masterdfg.json"), "w") as write_file:
             json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
+
+        dfgfile = os.path.join(self.conf, folder_name, "masterdfg.json")
+        for slave in all_slaves:
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
+
+            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile)
+            m.start()
+
+            threads.append(m)
 
         return overall_dfg
 
@@ -752,9 +763,6 @@ class Master:
         :param process: used Process
         :return:
         """
-        # TODO change for slave this part
-        all_childs_received = False
-
         if MasterVariableContainer.init_dfg_calc and os.path.exists(os.path.join(self.conf, process)):
             clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process)
         else:
@@ -762,37 +770,77 @@ class Master:
             return None
 
         # cut detection
-        cut = cut_detection.detect_cut(clean_dfg, "m", self.conf, process)
-
+        cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None, initial_end_activities=None, activities=None)
+        MasterVariableContainer.found_cut = cut
         # TODO remove slave dynamically if chosen
 
         # TODO get_best_slave should return a list
-
+        threads = []
+        processlist = {process: {}}
+        if not MasterVariableContainer.master.checkKey(MasterVariableContainer.send_dfgs, process):
+            MasterVariableContainer.send_dfgs.update(processlist)
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
             slave = MasterVariableContainer.best_slave
             best_host = MasterVariableContainer.master.slaves[slave][1]
             best_port = MasterVariableContainer.master.slaves[slave][2]
-            print(MasterVariableContainer.best_slave)
+            # print(MasterVariableContainer.best_slave)
             fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
-            print(fullfilepath)
+            # print(fullfilepath)
             m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
+            threads.append(m)
             m.start()
-            MasterVariableContainer.assign_dfg_request_threads.append(m)
-        return "IMD Done"
+            send_file = {filename: "send"}
+            MasterVariableContainer.send_dfgs[process].update(send_file)
+        # i = 0
+        # print(len(threads))
+        # for thread in threads:
+        #   thread.join()
+        #    tree[cut][i] = thread.content['tree']
+        #    i += 1
+        return None
 
-        #    MasterVariableContainer.master.send_split_dfg(s, 'm1')
-        # get all children
-        # loop send each children to one slave
-        # for i in s.child_names:
-        # filename = "0" + self.cut_name + str(i)
-        # self.send_split_dfg()
-        # wait for return from slaves
+    def checkKey(dictio, key):
+        if key in dictio.keys():
+            return True
+        else:
+            return False
 
-        # merge the results
+    def check_tree(self, process):
+        d = MasterVariableContainer.send_dfgs
+        b = True
+        if MasterVariableContainer.master.checkKey(d, process):
+            for s in d[process]:
+                if d[process][s] == "send":
+                    b = False
+        if b:
+            MasterVariableContainer.tree_found = True
+        return b
 
-        # tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
-        # return tree_repr
+    def result_tree(self, process):
+        if MasterVariableContainer.tree_found:
+            tree = {MasterVariableContainer.found_cut: {}}
+            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
+                with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
+                    subtree = json.load(filename)
+                    tree.update[MasterVariableContainer.found_cut](subtree)
+            return tree
+        return "No tree"
+
+    def save_subtree(self, folder_name, subtree_name, subtree, process):
+        if not os.path.isdir(os.path.join(self.conf, folder_name)):
+            os.mkdir(os.path.join(self.conf, folder_name))
+        if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
+            with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
+                json.dump(subtree, write_file)
+                d = MasterVariableContainer.send_dfgs
+                if not MasterVariableContainer.master.checkKey(d, process):
+                    print("No such process found")
+                    return None
+                else:
+                    MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
+        if self.check_tree(process):
+            self.result_tree(self, process)
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
@@ -828,7 +876,7 @@ class Master:
                 for key, value in newdfg.items():
                     temp = [key, value]
                     dfglist.append(temp)
-            print(dfglist)
+            # print(dfglist)
         return dfglist
 
     def res_cpu(self):

@@ -338,6 +338,7 @@ def check_sa_ea_for_each_branch(initial_dfg, dfg, conn_components, initial_start
     parallel_cut_ea = list(set(initial_end_activities).union(infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=False)).intersection(activities))
 
     if conn_components is None:
+        print("No conn_components")
         return False
 
     for comp in conn_components:
@@ -345,11 +346,15 @@ def check_sa_ea_for_each_branch(initial_dfg, dfg, conn_components, initial_start
         comp_ea_ok = False
 
         for sa in parallel_cut_sa:
+            print(str(sa))
             if sa in comp:
+                print("comps has sa")
                 comp_sa_ok = True
                 break
         for ea in parallel_cut_ea:
+            print(str(ea))
             if ea in comp:
+                print("comps has ea")
                 comp_ea_ok = True
                 break
 

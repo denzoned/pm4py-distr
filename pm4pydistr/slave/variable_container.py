@@ -8,5 +8,6 @@ class SlaveVariableContainer:
     memory = None
     cpupct = None
     cpuload = None
-    managed_logs = {}
-    managed_dfgs = {}
+    received_dfgs = {}
+    send_dfgs = {}
+    found_cuts = {}
