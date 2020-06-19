@@ -12,6 +12,7 @@ from pathlib import Path
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4pydistr.slave.do_ms_ping import DoMasterPing
 from pm4pydistr.slave.comp_dfg_rqst import CalcDfg
+from pm4pydistr.slave.post_result_tree import PostResultTree
 import uuid
 import socket
 import pythoncom
@@ -209,7 +210,7 @@ class Slave:
         return {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload,
                 "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
 
-    def slave_distr(self, filename):
+    def slave_distr(self, filename, parentfile, sendhost, sendport):
         folder = "parent_dfg"
         print("cutting:" + filename)
         if os.path.exists(os.path.join(self.conf, folder, "masterdfg.json")):
@@ -223,72 +224,112 @@ class Slave:
                     initial_end_activities = data["initial_end"]
                     process = data["process"]
                     cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"], initial_start_activities, initial_end_activities, data['activities'])
+                    SlaveVariableContainer.found_cuts.update({filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport}})
                     tree = {}
                     if cut == "seq":
-                        self.send_child_dfgs(process, cut)
+                        self.send_child_dfgs(process, cut, filename)
                         # tree = {"seq": childs}
                     if cut == "par":
-                        self.send_child_dfgs(process, cut)
+                        self.send_child_dfgs(process, cut, filename)
                         # tree = {"par": childs}
                     if cut == "loop":
-                        self.send_child_dfgs(process, cut)
+                        self.send_child_dfgs(process, cut, filename)
                         # tree = {"loop": childs}
                     if cut == "seq2":
-                        self.send_child_dfgs(process, cut)
+                        self.send_child_dfgs(process, cut, filename)
                         #tree = {"seq": childs}
                     if cut == "flower":
-                        # tree = ', '.join([str(elem) for elem in data["activities"]])
-                        # tree = "X(" + tree + ", " + u'\u03c4' + ")"
                         tree = {"flower": data["activities"]}
+                        SlaveVariableContainer.received_dfgs[filename] = tree
+                        self.send_result_tree(tree, filename, parentfile, sendhost, sendport)
                     if cut == "base_xor":
                         tree = {"base": data["activities"]}
+                        SlaveVariableContainer.received_dfgs[filename] = tree
+                        self.send_result_tree(tree, filename, parentfile, sendhost, sendport)
                     return tree
         return None
 
-    def send_child_dfgs(self, process, cut):
+    def send_child_dfgs(self, process, cut, parent):
         threads = []
         childs = []
         tree = {cut: {}}
+
+        processlist = {process: {}}
+        if not self.checkKey(SlaveVariableContainer.send_dfgs, process):
+            SlaveVariableContainer.send_dfgs.update(processlist)
+        if not self.checkKey(SlaveVariableContainer.send_dfgs[process], parent):
+            SlaveVariableContainer.send_dfgs[process].update({parent: {}})
+
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             # Best Slave Request
-            bestslave = self.slave_requests.get_best_slave()
-            besthost = bestslave[0]
-            bestport = bestslave[1]
-            fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
-            m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
-            m.start()
+            if not self.checkKey(SlaveVariableContainer.send_dfgs[process][parent], filename):
+                bestslave = self.slave_requests.get_best_slave()
+                besthost = bestslave[0]
+                bestport = bestslave[1]
+                fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
+                m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+                m.start()
+                send_file = {filename: "send"}
+                SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
 
-    def save_subtree(self, folder_name, subtree_name, subtree, process):
+    def save_subtree(self, folder_name, subtree_name, subtree, process, parent):
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
         if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
             with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
                 json.dump(subtree, write_file)
-                d = MasterVariableContainer.send_dfgs
-                if not MasterVariableContainer.master.checkKey(d, process):
+                d = SlaveVariableContainer.send_dfgs
+                if not self.checkKey(d, process):
                     print("No such process found")
                     return None
+                if not self.checkKey(d[process], parent):
+                    print("No such parent found")
+                    return None
                 else:
-                    MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
+                    SlaveVariableContainer.send_dfgs[process][parent][subtree_name] = "received"
         if self.check_tree(process):
-            self.result_tree(self, process)
+            tree = self.result_tree(self, process, parent)
+            host = SlaveVariableContainer.found_cuts[parent]["host"]
+            port = SlaveVariableContainer.found_cuts[parent]["port"]
+            self.send_result_tree(self, tree, subtree_name, host, port, parent)
 
-    def checkKey(dictio, key):
+    def send_result_tree(self, tree, name, host, port, res_parent):
+        treewithinfo = {}
+        treewithinfo.update({"tree": tree})
+        treewithinfo.update({"name": name})
+        treewithinfo.update({"parent": res_parent})
+
+        m = PostResultTree(self, self.conf, host, port, treewithinfo)
+        m.start()
+
+    def checkKey(self, dictio, key):
         if key in dictio.keys():
             return True
         else:
             return False
 
-    def check_tree(self, process):
-        d = MasterVariableContainer.send_dfgs
+    def check_tree(self, process, parent):
+        d = SlaveVariableContainer.send_dfgs
         b = True
-        if MasterVariableContainer.master.checkKey(d, process):
-            for s in d[process]:
-                if d[process][s] == "send":
-                    b = False
+        if self.checkKey(d, process):
+            if self.checkKey(d[process], parent):
+                for s in d[process][parent]:
+                    if d[process][parent][s] == "send":
+                        b = False
         if b:
-            MasterVariableContainer.tree_found = True
+            SlaveVariableContainer.received_dfgs[parent] = "found"
         return b
+
+    def result_tree(self, process, parent):
+        if SlaveVariableContainer.received_dfgs[parent] == "found":
+            # TODO
+            tree = {SlaveVariableContainer.found_cuts[parent]["cut"]: {}}
+            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
+                with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
+                    subtree = json.load(filename)
+                    tree[SlaveVariableContainer.found_cuts[parent]["cut"]].update(subtree)
+            return tree
+        return "No tree"
 
     @staticmethod
     def clean_init_dfg(conf, process):

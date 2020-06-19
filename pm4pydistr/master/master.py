@@ -800,7 +800,7 @@ class Master:
         #    i += 1
         return None
 
-    def checkKey(dictio, key):
+    def checkKey(self, dictio, key):
         if key in dictio.keys():
             return True
         else:
@@ -823,7 +823,7 @@ class Master:
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
                 with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
                     subtree = json.load(filename)
-                    tree.update[MasterVariableContainer.found_cut](subtree)
+                    tree[MasterVariableContainer.found_cut].update(subtree)
             return tree
         return "No tree"
 

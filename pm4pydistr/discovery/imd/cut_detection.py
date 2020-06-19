@@ -160,6 +160,7 @@ def save_cut(dfg, activities, parent_name, cut_name, position, conf, process, in
     json_dfg.update({"process": process})
     json_dfg.update({"initial_start": initial_start_activities})
     json_dfg.update({"initial_end": initial_end_activities})
+    json_dfg.update({"parent_file": parent_name})
     if not os.path.isdir(os.path.join(conf, folder_name)):
         os.mkdir(os.path.join(conf, folder_name))
     if not os.path.isdir(os.path.join(conf, folder_name, process)):

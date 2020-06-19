@@ -68,6 +68,8 @@ def synchronize_files():
 @SlaveSocketListener.app.route("/sendDFG", methods=["POST", "GET"])
 def send_dfg():
     keyphrase = request.args.get('keyphrase', type=str)
+    send_host = request.args.get('host', type=str)
+    send_port = request.args.get('port', type=str)
     if keyphrase == configuration.KEYPHRASE:
         #try:
         #    json_content = json.loads(request.data)
@@ -82,7 +84,8 @@ def send_dfg():
         SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
         # print(json_content)
         SlaveVariableContainer.received_dfgs.update({filename: "notree"})
-        SlaveVariableContainer.slave.slave_distr(filename)
+        parent_file = json_content["parent_file"]
+        SlaveVariableContainer.slave.slave_distr(filename, parent_file, send_host, send_port)
         # print(jsonify(tree))
         # return jsonify({'tree': tree})
     return jsonify({})
@@ -95,7 +98,9 @@ def return_tree():
         json_content = request.json
         # TODO what name to save
         tree_name = json_content["name"]
-        SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, json_content, process)
+        parent = json_content["parent"]
+        subtree = json_content["subtree"]
+        SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, subtree, process, parent)
 
 @SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
 def master_dfg():

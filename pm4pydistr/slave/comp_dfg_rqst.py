@@ -18,9 +18,8 @@ class CalcDfg(Thread):
         Thread.__init__(self)
 
     def run(self):
-        uri = "http://" + self.target_host + ":" + self.target_port + "/sendDFG?keyphrase=" + configuration.KEYPHRASE
+        uri = "http://" + self.target_host + ":" + self.target_port + "/sendDFG?keyphrase=" + configuration.KEYPHRASE + "&host=" + str(SlaveVariableContainer.host) + "&port=" + str(SlaveVariableContainer.port)
         # Might check if it works on bigger files
         with open(self.content) as f:
             data = json.load(f)
         r = requests.post(uri, json=data)
-        self.content = json.loads(r.text)

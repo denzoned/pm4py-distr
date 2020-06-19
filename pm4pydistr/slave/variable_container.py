@@ -11,3 +11,5 @@ class SlaveVariableContainer:
     received_dfgs = {}
     send_dfgs = {}
     found_cuts = {}
+    managed_logs = {}
+    managed_dfgs = {}

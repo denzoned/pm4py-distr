@@ -11,15 +11,26 @@ The example contains the partitioned version of the logs "receipt" and "roadtraf
 ## Easy setup after running python main.py
 
 1. Run everything needed for Inductive Miner directly-follows based with following call.
-It all steps until DFG calculation if doall=0, if doall=1 it will compute a DFG based on the log.
+It all steps until DFG calculation if doall=0, if doall=1 it will compute a DFG based on the log. For cleaning old calculations use clean=1.
 
-    http://localhost:5001/initialize?keyphrase=hello&process=receipt&doall=1
+    http://localhost:5001/initialize?keyphrase=hello&process=receipt&doall=1&clean=1
 
 2. To get the resource allocation function use:
+    
     http://localhost:5001/resAllFct?keyphrase=hello&cpu=1&ram=1&disk=0&k=10
     
     Each value for CPU, RAM and DISK will give a weight on each resource. 
     k is the slope variable for the RAM function, default is set to 10.
+    
+3. To run the a distributed IM DFG:
+    
+    http://localhost:5001/distributedIMD?keyphrase=hello&process=receipt
+    
+4. To see the result as a tree: (it might take a while)
+
+    http://localhost:5001/resultIMD?keyphrase=hello&process=receipt
+
+
     
 ## Example of usage of the distributed services (default keyphrase is "hello"):
 
