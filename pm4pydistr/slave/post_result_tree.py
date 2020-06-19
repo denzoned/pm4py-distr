@@ -17,6 +17,7 @@ class PostResultTree(Thread):
         Thread.__init__(self)
 
     def run(self):
+        print(self.target_host)
         uri = "http://" + self.target_host + ":" + self.target_port + "/sendTree?keyphrase=" + configuration.KEYPHRASE
 
         r = requests.post(uri, json=self.tree)

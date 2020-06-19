@@ -241,11 +241,11 @@ class Slave:
                     if cut == "flower":
                         tree = {"flower": data["activities"]}
                         SlaveVariableContainer.received_dfgs[filename] = tree
-                        self.send_result_tree(tree, filename, parentfile, sendhost, sendport)
+                        self.send_result_tree(tree, filename, sendhost, sendport, parentfile)
                     if cut == "base_xor":
                         tree = {"base": data["activities"]}
                         SlaveVariableContainer.received_dfgs[filename] = tree
-                        self.send_result_tree(tree, filename, parentfile, sendhost, sendport)
+                        self.send_result_tree(tree, filename, sendhost, sendport, parentfile)
                     return tree
         return None
 
@@ -290,7 +290,9 @@ class Slave:
         if self.check_tree(process):
             tree = self.result_tree(self, process, parent)
             host = SlaveVariableContainer.found_cuts[parent]["host"]
+            print("host: "+host)
             port = SlaveVariableContainer.found_cuts[parent]["port"]
+            print("port: " +port)
             self.send_result_tree(self, tree, subtree_name, host, port, parent)
 
     def send_result_tree(self, tree, name, host, port, res_parent):
@@ -298,7 +300,12 @@ class Slave:
         treewithinfo.update({"tree": tree})
         treewithinfo.update({"name": name})
         treewithinfo.update({"parent": res_parent})
-
+        print("Tree will be send")
+        print("treename:" + name)
+        print("parent name: " + res_parent)
+        print(tree)
+        print("host" + host)
+        print("port" + port)
         m = PostResultTree(self, self.conf, host, port, treewithinfo)
         m.start()
 
@@ -326,7 +333,7 @@ class Slave:
             tree = {SlaveVariableContainer.found_cuts[parent]["cut"]: {}}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
                 with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
-                    subtree = json.load(filename)
+                    subtree = json.load(read_file)
                     tree[SlaveVariableContainer.found_cuts[parent]["cut"]].update(subtree)
             return tree
         return "No tree"

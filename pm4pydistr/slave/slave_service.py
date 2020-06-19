@@ -101,6 +101,7 @@ def return_tree():
         parent = json_content["parent"]
         subtree = json_content["subtree"]
         SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, subtree, process, parent)
+    return jsonify({})
 
 @SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
 def master_dfg():

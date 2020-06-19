@@ -78,6 +78,8 @@ class Master:
         self.session_checker.start()
 
         self.init_dfg = {}
+        # MasterVariableContainer.master.host = "localhost"
+        # MasterVariableContainer.master.port = self.port
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -822,7 +824,7 @@ class Master:
             tree = {MasterVariableContainer.found_cut: {}}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
                 with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
-                    subtree = json.load(filename)
+                    subtree = json.load(read_file)
                     tree[MasterVariableContainer.found_cut].update(subtree)
             return tree
         return "No tree"
@@ -840,7 +842,7 @@ class Master:
                 else:
                     MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
         if self.check_tree(process):
-            self.result_tree(self, process)
+            self.result_tree(process)
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())

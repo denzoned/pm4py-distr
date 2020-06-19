@@ -627,7 +627,7 @@ def return_tree():
         # TODO what name to save
         tree_name = json_content["name"]
         MasterVariableContainer.master.save_subtree("returned_tree", tree_name, json_content, process)
-
+    return jsonify({})
 
 @MasterSocketListener.app.route("/RAMfunction", methods=["GET"])
 def ram_fct():
