@@ -297,7 +297,7 @@ class Slave:
 
     def send_result_tree(self, tree, name, host, port, res_parent):
         treewithinfo = {}
-        treewithinfo.update({"tree": tree})
+        treewithinfo.update({"subtree": tree})
         treewithinfo.update({"name": name})
         treewithinfo.update({"parent": res_parent})
         print("Tree will be send")

@@ -45,10 +45,7 @@ class SlaveRequests:
         r = requests.get(
             "http://" + self.master_host + ":" + self.master_port + "/getBestSlave?keyphrase=" + configuration.KEYPHRASE)
 
-        print(r.text)
         response = eval(r.text)
         host = response['BestSlavehost']
         port = response['BestSlaveport']
-        print(host)
-        print(port)
         return [host, port]
