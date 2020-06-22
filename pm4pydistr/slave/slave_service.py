@@ -117,6 +117,16 @@ def master_dfg():
         # print(json_content)
     return jsonify({})
 
+
+@SlaveSocketListener.app.route("/getStatus", methods=["GET"])
+def get_status():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        status = SlaveVariableContainer.send_dfgs
+        status.update(SlaveVariableContainer.received_dfgs)
+        return jsonify(status)
+    return jsonify({})
+
 @SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])
 def send_dfg2():
     keyphrase = request.args.get('keyphrase', type=str)

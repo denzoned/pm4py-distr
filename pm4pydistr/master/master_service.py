@@ -613,10 +613,17 @@ def result_IMD():
     process = request.args.get('process', type=str)
     if keyphrase == configuration.KEYPHRASE:
         if MasterVariableContainer.tree_found:
-            tree = MasterVariableContainer.master.return_tree(process)
+            tree = MasterVariableContainer.master.result_tree(process)
             return jsonify(tree)
         return jsonify({"Tree": "not found"})
     return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/getStatus", methods=["GET"])
+def get_status():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        return jsonify(MasterVariableContainer.send_dfgs)
+    return jsonify({})
 
 @MasterSocketListener.app.route("/sendTree", methods=["GET", "POST"])
 def return_tree():
