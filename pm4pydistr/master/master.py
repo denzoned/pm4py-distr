@@ -794,6 +794,7 @@ class Master:
             m.start()
             send_file = {filename: "send"}
             MasterVariableContainer.send_dfgs[process].update(send_file)
+            m.join()
         # i = 0
         # print(len(threads))
         # for thread in threads:
@@ -822,8 +823,8 @@ class Master:
     def result_tree(self, process):
         if MasterVariableContainer.tree_found:
             tree = {MasterVariableContainer.found_cut: {}}
-            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
-                with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
+            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
+                with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
                     tree[MasterVariableContainer.found_cut].update(subtree)
             return tree
@@ -832,17 +833,21 @@ class Master:
     def save_subtree(self, folder_name, subtree_name, subtree, process):
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
-        if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
-            with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
-                json.dump(subtree, write_file)
-                d = MasterVariableContainer.send_dfgs
-                if not MasterVariableContainer.master.checkKey(d, process):
-                    print("No such process found")
-                    return None
-                else:
-                    MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
+        print("Trying to save" + subtree_name)
+        # if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
+        with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
+            json.dump(subtree, write_file)
+            d = MasterVariableContainer.send_dfgs
+            print("Master saved " + subtree_name + " for process " + process)
+            if not MasterVariableContainer.master.checkKey(d, process):
+                print(process + " not found on Master")
+                return None
+            else:
+                print("Subtree" + subtree_name + " from  m received")
+                MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
         if self.check_tree(process):
             self.result_tree(process)
+        return None
 
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())

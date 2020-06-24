@@ -161,6 +161,7 @@ def save_cut(dfg, activities, parent_name, cut_name, position, conf, process, in
     json_dfg.update({"initial_start": initial_start_activities})
     json_dfg.update({"initial_end": initial_end_activities})
     json_dfg.update({"parent_file": parent_name})
+    print("Saving child " + file_name + " for parent " + parent_name)
     if not os.path.isdir(os.path.join(conf, folder_name)):
         os.mkdir(os.path.join(conf, folder_name))
     if not os.path.isdir(os.path.join(conf, folder_name, process)):
@@ -196,8 +197,8 @@ def detect_cut(initial_dfg, dfg, parent, conf, process, initial_start_activities
         else:
             activities = set(activities)
         conn_components = detection_utils.get_connected_components(ingoing, outgoing, activities)
-        print("Init Start: " + str(initial_start_activities) + ", Init End: " + str(initial_end_activities))
-        print(activities)
+        # print("Init Start: " + str(initial_start_activities) + ", Init End: " + str(initial_end_activities))
+        # print(activities)
 
         xor_cut = detect_xor_cut(dfg, conn_components)
         if xor_cut[0]:

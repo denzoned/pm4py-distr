@@ -93,13 +93,14 @@ def send_dfg():
 @SlaveSocketListener.app.route("/sendTree", methods=["GET", "POST"])
 def return_tree():
     keyphrase = request.args.get('keyphrase', type=str)
-    process = request.args.get('process', type=str)
+    # process = request.args.get('process', type=str)
     if keyphrase == configuration.KEYPHRASE:
         json_content = request.json
         # TODO what name to save
         tree_name = json_content["name"]
         parent = json_content["parent"]
         subtree = json_content["subtree"]
+        process = json_content["process"]
         SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, subtree, process, parent)
     return jsonify({})
 
@@ -122,8 +123,10 @@ def master_dfg():
 def get_status():
     keyphrase = request.args.get('keyphrase', type=str)
     if keyphrase == configuration.KEYPHRASE:
-        status = SlaveVariableContainer.send_dfgs
-        status.update(SlaveVariableContainer.received_dfgs)
+        status = {}
+        status["send dfgs"] = SlaveVariableContainer.send_dfgs
+        status["received"] = SlaveVariableContainer.received_dfgs
+        status["found cuts"] = SlaveVariableContainer.found_cuts
         return jsonify(status)
     return jsonify({})
 

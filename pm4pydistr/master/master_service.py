@@ -628,12 +628,18 @@ def get_status():
 @MasterSocketListener.app.route("/sendTree", methods=["GET", "POST"])
 def return_tree():
     keyphrase = request.args.get('keyphrase', type=str)
-    process = request.args.get('process', type=str)
+    # process = request.args.get('process', type=str)
     if keyphrase == configuration.KEYPHRASE:
         json_content = request.json
-        # TODO what name to save
         tree_name = json_content["name"]
-        MasterVariableContainer.master.save_subtree("returned_tree", tree_name, json_content, process)
+        print("Master received: " + tree_name)
+        parent = json_content["parent"]
+        subtree = json_content["subtree"]
+        process = json_content["process"]
+        if parent == "m":
+            MasterVariableContainer.master.save_subtree("returned_trees", tree_name, subtree, process)
+        else:
+            print("Parent" + parent + "not m")
     return jsonify({})
 
 @MasterSocketListener.app.route("/RAMfunction", methods=["GET"])
