@@ -166,7 +166,6 @@ class Slave:
             temperature_infos = w.Sensor()
 
             temp = 100
-            # return temperature_infos
             for sensor in temperature_infos:
                 if sensor.SensorType == u'Temperature':
                     if sensor.Name == 'CPU Package':
@@ -261,8 +260,8 @@ class Slave:
             # Best Slave Request
             if not self.checkKey(SlaveVariableContainer.send_dfgs[process][parent], filename):
                 bestslave = self.slave_requests.get_best_slave()
-                besthost = bestslave[0]
-                bestport = bestslave[1]
+                besthost = list(bestslave[0][1])[1]
+                bestport = list(bestslave[0][1])[2]
                 fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
                 m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
                 m.start()

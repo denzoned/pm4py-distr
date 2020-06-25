@@ -801,8 +801,5 @@ def get_bestslave():
 
     if keyphrase == configuration.KEYPHRASE:
         MasterVariableContainer.master.get_best_slave()
-        slave = MasterVariableContainer.best_slave
-        best_host = MasterVariableContainer.master.slaves[slave][1]
-        best_port = MasterVariableContainer.master.slaves[slave][2]
-        return jsonify({"BestSlavehost": best_host, "BestSlaveport": best_port})
+        return jsonify({"Slaves": MasterVariableContainer.best_slave})
     return jsonify({"Error": {}})

@@ -8,7 +8,7 @@ class MasterVariableContainer:
     assign_request_threads = []
     assign_dfg_request_threads = []
     init_dfg_calc = False
-    best_slave = 0
+    best_slave = {}
     ram_multiplier = 1
     cpu_multiplier = 1
     disk_multiplier = 1

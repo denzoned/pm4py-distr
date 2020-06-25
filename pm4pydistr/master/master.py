@@ -167,18 +167,18 @@ class Master:
             MasterVariableContainer.slave_loading_requested = True
 
     def get_best_slave(self):
-        all_slaves = list(self.slaves.keys())
-        i = 0
-        for slave in all_slaves:
-            if MasterVariableContainer.master.slaves[slave][12] > i:
-                i = MasterVariableContainer.master.slaves[slave][12]
-                MasterVariableContainer.best_slave = slave
+        # all_slaves = list(self.slaves.keys())
+        # for slave in all_slaves:
+            #if MasterVariableContainer.master.slaves[slave][12] > i:
+            # MasterVariableContainer.best_slave[slave] = MasterVariableContainer.master.slaves[slave][12]
+        MasterVariableContainer.best_slave = sorted(MasterVariableContainer.master.slaves.items(), key=lambda x: x[1][12], reverse=False)
+        # print(MasterVariableContainer.best_slave)
 
     def send_split_dfg(self, data, child):
         MasterVariableContainer.master.get_best_slave()
-        slave = MasterVariableContainer.best_slave
-        slave_host = MasterVariableContainer.master.slaves[slave][1]
-        slave_port = MasterVariableContainer.master.slaves[slave][2]
+        slave = MasterVariableContainer.best_slave[0]
+        slave_host = MasterVariableContainer.best_slave[0][1][1]
+        slave_port = MasterVariableContainer.best_slave[0][1][2]
         m = CompDfgRequest(None, slave_host, slave_port, False, 100000, data)
         m.start()
         # MasterVariableContainer.assign_request_threads.append(m)
@@ -783,9 +783,9 @@ class Master:
             MasterVariableContainer.send_dfgs.update(processlist)
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
-            slave = MasterVariableContainer.best_slave
-            best_host = MasterVariableContainer.master.slaves[slave][1]
-            best_port = MasterVariableContainer.master.slaves[slave][2]
+            slave = MasterVariableContainer.best_slave[0]
+            best_host = MasterVariableContainer.best_slave[0][1][1]
+            best_port = MasterVariableContainer.best_slave[0][1][2]
             # print(MasterVariableContainer.best_slave)
             fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
             # print(fullfilepath)
@@ -940,14 +940,6 @@ class Master:
                 MasterVariableContainer.slave_loading_requested = False
                 m.start()
                 m.join()
-#        MasterVariableContainer.master.check_slaves()
-#         MasterVariableContainer.master.do_assignment()
-#         MasterVariableContainer.master.make_slaves_load()
-        # if doall == 1:
-        #     if MasterVariableContainer.log_assignment_done == True and MasterVariableContainer.slave_loading_requested == True:
-        #         MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
-        #                                              attribute_key)
-
         return None
 
     def res_all(self, ram, cpu, disk, k):
