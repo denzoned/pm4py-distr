@@ -259,12 +259,27 @@ class Slave:
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             # Best Slave Request
             if not self.checkKey(SlaveVariableContainer.send_dfgs[process][parent], filename):
-                bestslave = self.slave_requests.get_best_slave()
-                besthost = list(bestslave[0][1])[1]
-                bestport = list(bestslave[0][1])[2]
                 fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
-                m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
-                m.start()
+                bestslave = self.slave_requests.get_best_slave()
+                if list(bestslave[0][1])[0] == self.conf:
+                    with open(fullfilepath) as f:
+                        data = json.load(f)
+                    json_content = data
+                    folder = "parent_dfg"
+                    # TODO give dfg some version
+                    filename = str(json_content["name"]) + ".json"
+                    if folder not in os.listdir(SlaveVariableContainer.conf):
+                        SlaveVariableContainer.slave.create_folder(folder)
+                    SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+                    # print(json_content)
+                    SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+                    parent_file = json_content["parent_file"]
+                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
+                else:
+                    besthost = list(bestslave[0][1])[1]
+                    bestport = list(bestslave[0][1])[2]
+                    m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+                    m.start()
                 send_file = {filename: "send"}
                 SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
 
@@ -277,13 +292,13 @@ class Slave:
                 d = SlaveVariableContainer.send_dfgs
                 parentfile = parent + ".json"
                 if not self.checkKey(d, process):
-                    print("Process " + process + " not found")
+                    print("Slaveerror: Process " + process + " not found")
                     return None
                 if not self.checkKey(d[process], parentfile):
-                    print("Parent " + parentfile + " not found")
+                    print("Slaveerror: Parent " + parentfile + " not found")
                     return None
                 else:
-                    print("Subtree" + subtree_name + " from " + parentfile + "received")
+                    print("Slave: Subtree" + subtree_name + " from " + parentfile + "received")
                     SlaveVariableContainer.send_dfgs[process][parentfile][subtree_name] = "received"
         if self.check_tree(process, parentfile):
             tree = self.result_tree(process, parent)
@@ -321,6 +336,8 @@ class Slave:
                 for s in d[process][parent]:
                     if d[process][parent][s] == "send":
                         b = False
+        if SlaveVariableContainer.received_dfgs[parent] == "found":
+            b = False
         if b:
             print("Parent " + parent + " tree found")
             SlaveVariableContainer.received_dfgs[parent] = "found"
