@@ -852,7 +852,7 @@ class Master:
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
         for slave in all_slaves:
-            slave_ram = self.slaves[slave][5][1]
+            slave_ram = self.slaves[slave][5]['available']
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             self.slaves[slave][11][0] = slave_ram
@@ -913,7 +913,7 @@ class Master:
         all_slaves = list(self.slaves.keys())
         maxdfg = sys.getsizeof(self.init_dfg)
         for slave in all_slaves:
-            freedisk = self.slaves[slave][8][1]
+            freedisk = self.slaves[slave][8]['free']
             iowait = self.slaves[slave][13]
             if freedisk > maxdfg:
                 h_io = 1 - iowait
@@ -928,7 +928,7 @@ class Master:
         configuration.MAX_RAM = 0
         threads = []
         for slave in all_slaves:
-            ram = self.slaves[slave][5][0]
+            ram = self.slaves[slave][5]['available']
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
             if ram > configuration.MAX_RAM:

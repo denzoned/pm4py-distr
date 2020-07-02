@@ -202,12 +202,13 @@ class Slave:
         self.os = self.get_OS()
         self.temp = self.get_temperature(self.os)
         self.diskusage = self.get_disk_usage()
+
         self.memory = self.get_memory()
         self.CPUload = self.get_load()
         self.CPUpct = self.get_CPU()
         self.iowait = self.get_iowait(self.os)
-        return {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload,
-                "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
+        jsonfile = {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload, "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
+        return jsonfile
 
     def slave_distr(self, filename, parentfile, sendhost, sendport):
         folder = "parent_dfg"
@@ -266,7 +267,6 @@ class Slave:
                         data = json.load(f)
                     json_content = data
                     folder = "parent_dfg"
-                    # TODO give dfg some version
                     filename = str(json_content["name"]) + ".json"
                     if folder not in os.listdir(SlaveVariableContainer.conf):
                         SlaveVariableContainer.slave.create_folder(folder)
@@ -276,12 +276,51 @@ class Slave:
                     parent_file = json_content["parent_file"]
                     SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
                 else:
-                    besthost = list(bestslave[0][1])[1]
-                    bestport = list(bestslave[0][1])[2]
+                    # TODO ping all slaves to compute ping with resource allocation value
+                    slavelist = self.ping_slaves(list(bestslave[0]))
+                    besthost = slavelist[0][1]
+                    bestport = slavelist[0][2]
                     m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
                     m.start()
                 send_file = {filename: "send"}
                 SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
+
+    def ping_slaves(self, slave_list):
+        i = 0
+        bandwidth = SlaveVariableContainer.bandwidth
+        # slave_list includes all information needed like from slave list in master
+        while i < len(slave_list):
+            ranglist = {}
+            if slave_list[i][1] != self.host:
+                if self.os == 2:
+                    ping = os.system('ping /n 1 host')
+                if self.os == 0 or self.os == 1:
+                    ping = os.system('ping -c 1 host')
+                # We use for bandwidth a fixed variable, which is not dynamic, as it is easier and for closed environment should be more or less stable
+                # In Kilobits per second
+                # Delay should be 10s of microseconds, ping is in milliseconds
+                delay = ping * 100
+                # network metric value for connecting slave
+                network_metric = 256*(pow(10, 4)/bandwidth + delay)
+                ranglist[i] = network_metric
+            if slave_list[i][1] == self.host:
+                ranglist[i] = 10000000000000
+            i += 1
+        newlist = sorted(ranglist.items(), key=lambda x: x[1], reverse=False)
+        for index, s in enumerate(newlist):
+            number = index + 1
+            print(str(s[0]) + " " + str(number))
+            for n in ranglist:
+                if n == s[0]:
+                    ranglist[n] = number
+        print(ranglist)
+
+        for m in slave_list:
+            value = ((1-(ranglist[m]/len(slave_list))) * SlaveVariableContainer.network_multiplier + slave_list[m])/(SlaveVariableContainer.network_multiplier + 1)
+            slave_list[i][12] = value
+        slave_list = list.sort(slave_list, key=lambda x: x[12])
+        print(slave_list)
+        return slave_list
 
     def save_subtree(self, folder_name, subtree_name, subtree, process, parent):
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
@@ -346,7 +385,6 @@ class Slave:
     def result_tree(self, process, parent):
         parentfile = parent + ".json"
         if SlaveVariableContainer.received_dfgs[parentfile] == "found":
-            # TODO
             tree = {SlaveVariableContainer.found_cuts[parentfile]["cut"]: {}}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
                 with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:

@@ -13,3 +13,5 @@ class SlaveVariableContainer:
     found_cuts = {}
     managed_logs = {}
     managed_dfgs = {}
+    bandwidth = 800000
+    network_multiplier = 1

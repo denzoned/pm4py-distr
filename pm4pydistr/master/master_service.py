@@ -785,10 +785,10 @@ def send_res():
     iowait = request.args.get('iowait')
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[str(id)][5] = json.loads(memory)
+        MasterVariableContainer.master.slaves[str(id)][5] = eval(memory)
         MasterVariableContainer.master.slaves[str(id)][6] = eval(cpupct)
         MasterVariableContainer.master.slaves[str(id)][7] = json.loads(cpuload)
-        MasterVariableContainer.master.slaves[str(id)][8] = json.loads(diskusage)
+        MasterVariableContainer.master.slaves[str(id)][8] = eval(diskusage)
         MasterVariableContainer.master.slaves[str(id)][9] = eval(temp)
         MasterVariableContainer.master.slaves[str(id)][10] = int(oss)
         MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
