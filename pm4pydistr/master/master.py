@@ -782,9 +782,10 @@ class Master:
             MasterVariableContainer.send_dfgs.update(processlist)
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
-            slave = MasterVariableContainer.best_slave[0]
-            best_host = MasterVariableContainer.best_slave[0][1][1]
-            best_port = MasterVariableContainer.best_slave[0][1][2]
+            slave = MasterVariableContainer.best_slave[index]
+            print(str(slave))
+            best_host = MasterVariableContainer.best_slave[index][1][1]
+            best_port = MasterVariableContainer.best_slave[index][1][2]
             # print(MasterVariableContainer.best_slave)
             fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
             # print(fullfilepath)

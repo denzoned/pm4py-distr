@@ -1,4 +1,6 @@
+import datetime
 import json
+import subprocess
 from collections import Counter
 
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
@@ -277,9 +279,9 @@ class Slave:
                     SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
                 else:
                     # TODO ping all slaves to compute ping with resource allocation value
-                    slavelist = self.ping_slaves(list(bestslave[0]))
-                    besthost = slavelist[0][1]
-                    bestport = slavelist[0][2]
+                    slavelist = self.ping_slaves(list(bestslave))
+                    besthost = slavelist[0][1][1]
+                    bestport = slavelist[0][1][2]
                     m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
                     m.start()
                 send_file = {filename: "send"}
@@ -289,37 +291,40 @@ class Slave:
         i = 0
         bandwidth = SlaveVariableContainer.bandwidth
         # slave_list includes all information needed like from slave list in master
+        ranglist = {}
         while i < len(slave_list):
-            ranglist = {}
-            if slave_list[i][1] != self.host:
+            if slave_list[i][1][1] != self.host:
+                print("Different host pinging")
                 if self.os == 2:
-                    ping = os.system('ping /n 1 host')
+                    param = "-n"
                 if self.os == 0 or self.os == 1:
-                    ping = os.system('ping -c 1 host')
+                    param = "-c"
+                command = ['ping', param, '1', slave_list[i][1][1]]
+                time_before_ping = datetime.datetime.now()
+                subprocess.Popen(command)
+                time_after_ping = datetime.datetime.now()
+                time_for_ping = (time_after_ping - time_before_ping).microseconds
                 # We use for bandwidth a fixed variable, which is not dynamic, as it is easier and for closed environment should be more or less stable
                 # In Kilobits per second
-                # Delay should be 10s of microseconds, ping is in milliseconds
-                delay = ping * 100
+                # Delay should be 10s of microseconds, ping is in microseconds
+                delay = time_for_ping/10
                 # network metric value for connecting slave
                 network_metric = 256*(pow(10, 4)/bandwidth + delay)
-                ranglist[i] = network_metric
-            if slave_list[i][1] == self.host:
-                ranglist[i] = 10000000000000
+                ranglist.update({i: network_metric})
+            if slave_list[i][1][1] == self.host:
+                ranglist.update({i: 10000000000000})
             i += 1
         newlist = sorted(ranglist.items(), key=lambda x: x[1], reverse=False)
         for index, s in enumerate(newlist):
             number = index + 1
-            print(str(s[0]) + " " + str(number))
             for n in ranglist:
                 if n == s[0]:
                     ranglist[n] = number
-        print(ranglist)
 
-        for m in slave_list:
-            value = ((1-(ranglist[m]/len(slave_list))) * SlaveVariableContainer.network_multiplier + slave_list[m])/(SlaveVariableContainer.network_multiplier + 1)
-            slave_list[i][12] = value
-        slave_list = list.sort(slave_list, key=lambda x: x[12])
-        print(slave_list)
+        for index, m in enumerate(slave_list):
+            value = ((1-(ranglist[index]/len(slave_list))) * SlaveVariableContainer.network_multiplier + slave_list[index][1][12])/(SlaveVariableContainer.network_multiplier + 1)
+            slave_list[index][1][12] = value
+        list.sort(slave_list, key=lambda x: x[1][12], reverse=True)
         return slave_list
 
     def save_subtree(self, folder_name, subtree_name, subtree, process, parent):
