@@ -16,3 +16,4 @@ class MasterVariableContainer:
     tree_found = False
     found_cut = ""
     send_dfgs = {}
+    all_resources_received = False

@@ -792,6 +792,12 @@ def send_res():
         MasterVariableContainer.master.slaves[str(id)][9] = eval(temp)
         MasterVariableContainer.master.slaves[str(id)][10] = int(oss)
         MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
+        b = True
+        for s in MasterVariableContainer.master.slaves:
+            if MasterVariableContainer.master.slaves[s][5] == 1:
+                b = False
+        if b == True:
+            MasterVariableContainer.all_resources_received = True
         return jsonify({"Saved": memory})
     return jsonify({"Error": {}})
 

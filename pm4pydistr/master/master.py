@@ -776,7 +776,6 @@ class Master:
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None, initial_end_activities=None, activities=None)
         MasterVariableContainer.found_cut = cut
-        # TODO remove slave dynamically if chosen
         threads = []
         processlist = {process: {}}
         if not MasterVariableContainer.master.checkKey(MasterVariableContainer.send_dfgs, process):
@@ -825,7 +824,7 @@ class Master:
 
     def result_tree(self, process):
         if MasterVariableContainer.tree_found:
-            tree = {MasterVariableContainer.found_cut: {}, "Time to compute": self.imdtime}
+            tree = {MasterVariableContainer.found_cut: {}, "Time to compute": str(self.imdtime)}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
@@ -946,16 +945,17 @@ class Master:
         return None
 
     def res_all(self, ram, cpu, disk, k):
-        MasterVariableContainer.master.res_ram(k)
-        MasterVariableContainer.master.res_cpu()
-        MasterVariableContainer.master.res_disk()
+        if MasterVariableContainer.all_resources_received:
+            MasterVariableContainer.master.res_ram(k)
+            MasterVariableContainer.master.res_cpu()
+            MasterVariableContainer.master.res_disk()
 
-        all_slaves = list(self.slaves.keys())
-        for slave in all_slaves:
-            ramval = self.slaves[slave][11][0]
-            cpuval = self.slaves[slave][11][1]
-            diskval = self.slaves[slave][11][2]
-            f = (ram * ramval) + (cpu * cpuval) + (disk * diskval)
-            f = f / (ram + cpu + disk)
-            self.slaves[slave][12] = f
+            all_slaves = list(self.slaves.keys())
+            for slave in all_slaves:
+                ramval = self.slaves[slave][11][0]
+                cpuval = self.slaves[slave][11][1]
+                diskval = self.slaves[slave][11][2]
+                f = (ram * ramval) + (cpu * cpuval) + (disk * diskval)
+                f = f / (ram + cpu + disk)
+                self.slaves[slave][12] = f
         return None
