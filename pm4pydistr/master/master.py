@@ -1,3 +1,4 @@
+import datetime
 import json
 import math
 import os
@@ -78,6 +79,7 @@ class Master:
         self.session_checker.start()
 
         self.init_dfg = {}
+        self.imdtime = datetime
         # MasterVariableContainer.master.host = "localhost"
         # MasterVariableContainer.master.port = self.port
 
@@ -770,13 +772,11 @@ class Master:
         else:
             print("No DFG")
             return None
-
+        self.imdtime = datetime.datetime.now()
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None, initial_end_activities=None, activities=None)
         MasterVariableContainer.found_cut = cut
         # TODO remove slave dynamically if chosen
-
-        # TODO get_best_slave should return a list
         threads = []
         processlist = {process: {}}
         if not MasterVariableContainer.master.checkKey(MasterVariableContainer.send_dfgs, process):
@@ -818,11 +818,14 @@ class Master:
                     b = False
         if b:
             MasterVariableContainer.tree_found = True
+            endtime = datetime.datetime.now()
+            self.imdtime = endtime - self.imdtime
+            print("Tree computed in: " + str(self.imdtime))
         return b
 
     def result_tree(self, process):
         if MasterVariableContainer.tree_found:
-            tree = {MasterVariableContainer.found_cut: {}}
+            tree = {MasterVariableContainer.found_cut: {}, "Time to compute": self.imdtime}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
