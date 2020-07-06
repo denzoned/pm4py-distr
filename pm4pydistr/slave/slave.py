@@ -301,7 +301,8 @@ class Slave:
                     param = "-c"
                 command = ['ping', param, '1', slave_list[i][1][1]]
                 time_before_ping = datetime.datetime.now()
-                subprocess.Popen(command)
+                t = subprocess.Popen(command)
+                t.wait()
                 time_after_ping = datetime.datetime.now()
                 time_for_ping = (time_after_ping - time_before_ping).microseconds
                 # We use for bandwidth a fixed variable, which is not dynamic, as it is easier and for closed environment should be more or less stable
