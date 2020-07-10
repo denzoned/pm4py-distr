@@ -780,8 +780,6 @@ class Master:
         processlist = {process: {}}
         if not MasterVariableContainer.master.checkKey(MasterVariableContainer.send_dfgs, process):
             MasterVariableContainer.send_dfgs.update(processlist)
-        # TODO send dfgs based on filesize, bigger file to better slave
-        # TODO also add threshold for filesize
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
             slave = MasterVariableContainer.best_slave[index]

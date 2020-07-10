@@ -743,7 +743,6 @@ def disk_fct():
         return jsonify({"DISKfct": resource})
     return jsonify({"Error": {}})
 
-#TODO Set on 0 when 2 and received a ping
 @MasterSocketListener.app.route("/reserveSlave", methods=["GET"])
 def reserve_fct():
     # returns the state of reservation, changed if possible
