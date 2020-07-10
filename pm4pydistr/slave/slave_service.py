@@ -77,7 +77,6 @@ def send_dfg():
         #    json_content = json.loads(request.data.decode('utf-8'))
         json_content = request.json
         folder = "parent_dfg"
-        # TODO give dfg some version
         filename = str(json_content["name"]) + ".json"
         if folder not in os.listdir(SlaveVariableContainer.conf):
             SlaveVariableContainer.slave.create_folder(folder)
@@ -96,7 +95,6 @@ def return_tree():
     # process = request.args.get('process', type=str)
     if keyphrase == configuration.KEYPHRASE:
         json_content = request.json
-        # TODO what name to save
         tree_name = json_content["name"]
         parent = json_content["parent"]
         subtree = json_content["subtree"]
@@ -130,6 +128,7 @@ def get_status():
         return jsonify(status)
     return jsonify({})
 
+# TODO check if remove safe
 @SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])
 def send_dfg2():
     keyphrase = request.args.get('keyphrase', type=str)
@@ -143,10 +142,6 @@ def send_dfg2():
             filepath = os.path.join(SlaveVariableContainer.conf, folder, filename)
             file.save(filepath)
             print(str(filepath) + " saved")
-
-        # TODO find cut on received pickle
-
-        # TODO send return
     return jsonify({})
 
 @SlaveSocketListener.app.route("/removeOldFiles", methods=["GET"])

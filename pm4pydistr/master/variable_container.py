@@ -17,3 +17,4 @@ class MasterVariableContainer:
     found_cut = ""
     send_dfgs = {}
     all_resources_received = False
+    reserved_slaves = {}

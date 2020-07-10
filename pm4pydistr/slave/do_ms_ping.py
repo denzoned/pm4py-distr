@@ -35,7 +35,7 @@ class DoMasterPing(Thread):
                 self.port) + "&keyphrase=" + configuration.KEYPHRASE
             r = requests.get(uri)
 
-            uri2 = "http://" + self.master_host + ":" + self.port + "/getResources?keyphrase=" + configuration.KEYPHRASE
+            uri2 = "http://" + self.host + ":" + self.port + "/getResources?keyphrase=" + configuration.KEYPHRASE
             r2 = requests.get(uri2)
             data = json.loads(r2.text)
             #print(data)

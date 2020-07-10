@@ -743,6 +743,42 @@ def disk_fct():
         return jsonify({"DISKfct": resource})
     return jsonify({"Error": {}})
 
+#TODO Set on 0 when 2 and received a ping
+@MasterSocketListener.app.route("/reserveSlave", methods=["GET"])
+def reserve_fct():
+    # returns the state of reservation, changed if possible
+    keyphrase = request.args.get('keyphrase', type=str)
+    slave = request.args.get('slave', type=str)
+    # Slave will be unlocked after DFG send
+    unlock = request.args.get('unlock', type=str)
+    # replace a with reserved_slaves
+    print("Reserveattempt: " + str(slave) + ", unlock: " + str(unlock))
+    if keyphrase == configuration.KEYPHRASE:
+        if slave in MasterVariableContainer.reserved_slaves:
+            print("slave in reservation list")
+            if MasterVariableContainer.reserved_slaves[slave] == 1:
+                if int(unlock) == 1:
+                    MasterVariableContainer.reserved_slaves[slave] = 2
+                    print(MasterVariableContainer.reserved_slaves)
+                    return jsonify({"Reservation": 2})
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 1})
+            if MasterVariableContainer.reserved_slaves[slave] == 0:
+                MasterVariableContainer.reserved_slaves[slave] = 1
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 0})
+            if MasterVariableContainer.reserved_slaves[slave] == 2:
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 2})
+            # If set to 1 or 2
+        # If nor reserved or not in dict yet
+        else:
+            MasterVariableContainer.reserved_slaves.update({slave: 1})
+            print(MasterVariableContainer.reserved_slaves)
+            # But response will be 0 to say it was not reserved and could be reserved successfully
+            return jsonify({"Reservation": 0})
+    return jsonify({})
+
 
 @MasterSocketListener.app.route("/resAllFct", methods=["GET"])
 def resall_fct():

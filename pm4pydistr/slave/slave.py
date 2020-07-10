@@ -14,6 +14,7 @@ from pathlib import Path
 from pm4py.objects.log.importer.parquet import factory as parquet_importer
 from pm4pydistr.slave.do_ms_ping import DoMasterPing
 from pm4pydistr.slave.comp_dfg_rqst import CalcDfg
+from pm4pydistr.slave.reserve_rqst import ReserveSlave
 from pm4pydistr.slave.post_result_tree import PostResultTree
 import uuid
 import socket
@@ -278,12 +279,43 @@ class Slave:
                     parent_file = json_content["parent_file"]
                     SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
                 else:
-                    # TODO ping all slaves to compute ping with resource allocation value
                     slavelist = self.ping_slaves(list(bestslave))
-                    besthost = slavelist[0][1][1]
-                    bestport = slavelist[0][1][2]
-                    m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
-                    m.start()
+                    # reserve slave then send dfg to best free slave
+                    i = 0
+                    send = False
+                    while i < len(slavelist):
+                        toreserve = ReserveSlave(str(slavelist[i][1][0]), self.master_host, self.master_port, 0)
+                        toreserve.start()
+                        toreserve.join()
+                        reserveattempt = toreserve.conf
+                        if reserveattempt == 0:
+                            besthost = slavelist[i][1][1]
+                            bestport = slavelist[i][1][2]
+                            m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+                            m.start()
+                            # notify master that DFG send
+                            n = ReserveSlave(str(slavelist[i][1][0]), self.master_host, self.master_port, 1)
+                            n.start()
+                            i = len(slavelist)
+                            send = True
+                        elif reserveattempt == 1:
+                            i += 1
+                        elif reserveattempt == 2:
+                            i += 1
+                    # In case all slaves are reserved, which is unlikely and causes lot of overhead, compute by itself
+                    if not send:
+                        with open(fullfilepath) as f:
+                            data = json.load(f)
+                        json_content = data
+                        folder = "parent_dfg"
+                        filename = str(json_content["name"]) + ".json"
+                        if folder not in os.listdir(SlaveVariableContainer.conf):
+                            SlaveVariableContainer.slave.create_folder(folder)
+                        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+                        # print(json_content)
+                        SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+                        parent_file = json_content["parent_file"]
+                        SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
                 send_file = {filename: "send"}
                 SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
 
