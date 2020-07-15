@@ -99,7 +99,7 @@ def return_tree():
         parent = json_content["parent"]
         subtree = json_content["subtree"]
         process = json_content["process"]
-        SlaveVariableContainer.slave.save_subtree("returned_tree", tree_name, subtree, process, parent)
+        SlaveVariableContainer.slave.save_subtree("returned_trees", tree_name, subtree, process, parent)
     return jsonify({})
 
 @SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
@@ -126,22 +126,6 @@ def get_status():
         status["received"] = SlaveVariableContainer.received_dfgs
         status["found cuts"] = SlaveVariableContainer.found_cuts
         return jsonify(status)
-    return jsonify({})
-
-# TODO check if remove safe
-@SlaveSocketListener.app.route("/sendDFG2", methods=["POST", "GET"])
-def send_dfg2():
-    keyphrase = request.args.get('keyphrase', type=str)
-    if keyphrase == configuration.KEYPHRASE:
-        folder = "dfg-folder"
-        # print(folder)
-        SlaveVariableContainer.managed_dfgs[folder] = []
-        if folder not in os.listdir(SlaveVariableContainer.conf):
-            SlaveVariableContainer.slave.create_folder(folder)
-        for filename, file in request.files.items():
-            filepath = os.path.join(SlaveVariableContainer.conf, folder, filename)
-            file.save(filepath)
-            print(str(filepath) + " saved")
     return jsonify({})
 
 @SlaveSocketListener.app.route("/removeOldFiles", methods=["GET"])

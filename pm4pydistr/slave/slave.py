@@ -437,8 +437,8 @@ class Slave:
         parentfile = parent + ".json"
         if SlaveVariableContainer.received_dfgs[parentfile] == "found":
             tree = {SlaveVariableContainer.found_cuts[parentfile]["cut"]: {}}
-            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_tree"))):
-                with open(os.path.join(self.conf, "returned_tree", filename), "r") as read_file:
+            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
+                with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
                     tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update(subtree)
             return tree
