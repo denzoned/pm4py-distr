@@ -260,7 +260,7 @@ class Slave:
             SlaveVariableContainer.send_dfgs.update(processlist)
         if not self.checkKey(SlaveVariableContainer.send_dfgs[process], parent):
             SlaveVariableContainer.send_dfgs[process].update({parent: {}})
-
+        print("Send dfgs: " + str(SlaveVariableContainer.send_dfgs))
         filesizelist = {}
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             # Best Slave Request
@@ -312,6 +312,8 @@ class Slave:
                         bestport = slavelist[i+add][1][2]
                         print("Sending to " + str(slavelist[i+add][1][0]) + " from " + str(self.conf))
                         m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+                        head, tail = os.path.split(fullfilepath)
+                        filename = tail
                         m.start()
                         # notify master that DFG send
                         n = ReserveSlave(str(slavelist[i][1][0]), self.master_host, self.master_port, 1)
@@ -338,6 +340,7 @@ class Slave:
                         SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
             send_file = {filename: "send"}
             SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
+            print(SlaveVariableContainer.send_dfgs[process][parent])
 
     def ping_slaves(self, slave_list):
         i = 0
@@ -381,6 +384,7 @@ class Slave:
         return slave_list
 
     def save_subtree(self, folder_name, subtree_name, subtree, process, parent):
+        print("Received tree " + str(subtree_name) + " for: " + str(parent))
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
         parentfile = parent + ".json"
@@ -396,8 +400,9 @@ class Slave:
                     print("Slaveerror: Parent " + parentfile + " not found")
                     return None
                 else:
-                    print(self.conf + " saves subtree" + subtree_name + " for " + parentfile + "received")
+                    print(self.conf + " saves received subtree " + subtree_name + " for " + parentfile)
                     SlaveVariableContainer.send_dfgs[process][parentfile][subtree_name] = "received"
+        print("Send dfgs:  " + str(SlaveVariableContainer.send_dfgs[process][parentfile]))
         if self.check_tree(process, parentfile):
             tree = self.result_tree(process, parent)
             host = SlaveVariableContainer.found_cuts[parentfile]["sendhost"]
@@ -411,8 +416,8 @@ class Slave:
         treewithinfo.update({"name": name})
         treewithinfo.update({"parent": res_parent})
         treewithinfo.update(({"process": process}))
-        print("Sending tree " + name + " back of parent: " + res_parent)
-        print(tree)
+        print("Sending tree " + name + " back for parent dfg: " + res_parent)
+        print("Result tree: " + str(tree) + " will be send from " + str(self.conf))
         # print("host" + host)
         # print("port" + port)
         m = PostResultTree(self, self.conf, host, port, treewithinfo)
@@ -433,9 +438,10 @@ class Slave:
                     if d[process][parent][s] == "send":
                         b = False
         if SlaveVariableContainer.received_dfgs[parent] == "found":
+            print("No tree found yet for " + parent)
             b = False
         if b:
-            print("Parent " + parent + " tree found")
+            print("All subtrees found for " + parent)
             SlaveVariableContainer.received_dfgs[parent] = "found"
         return b
 

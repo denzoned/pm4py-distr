@@ -841,12 +841,11 @@ class Master:
         with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
             json.dump(subtree, write_file)
             d = MasterVariableContainer.send_dfgs
-            print("Master saved " + subtree_name + " for process " + process)
             if not MasterVariableContainer.master.checkKey(d, process):
                 print(process + " not found on Master")
                 return None
             else:
-                print("Subtree" + subtree_name + " from  m received")
+                print("Master saved " + subtree_name + " for process " + process)
                 MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
         if self.check_tree(process):
             self.result_tree(process)
