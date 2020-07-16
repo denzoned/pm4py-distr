@@ -754,7 +754,7 @@ def reserve_fct():
     print("Reserveattempt: " + str(slave) + ", unlock: " + str(unlock))
     if keyphrase == configuration.KEYPHRASE:
         if slave in MasterVariableContainer.reserved_slaves:
-            print("slave in reservation list")
+            # print("slave in reservation list")
             if MasterVariableContainer.reserved_slaves[slave] == 1:
                 if int(unlock) == 1:
                     MasterVariableContainer.reserved_slaves[slave] = 2

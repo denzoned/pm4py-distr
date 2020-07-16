@@ -215,7 +215,7 @@ class Slave:
 
     def slave_distr(self, filename, parentfile, sendhost, sendport):
         folder = "parent_dfg"
-        print("cutting:" + filename)
+        print(self.conf + " cutting: " + filename)
         if os.path.exists(os.path.join(self.conf, folder, "masterdfg.json")):
             init_dfg = self.clean_init_dfg(self.conf, folder)
             if os.path.exists(os.path.join(self.conf, folder, filename)):
@@ -245,6 +245,7 @@ class Slave:
                     if cut == "base_xor":
                         tree = {"base": data["activities"]}
                         SlaveVariableContainer.received_dfgs[filename] = tree
+                        parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                         self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                     return tree
         return None
@@ -269,15 +270,20 @@ class Slave:
                 file_stats = os.stat(fullfilepath)
                 filesizelist[fullfilepath] = file_stats.st_size/1024
         sortedfilesizelist = sorted(filesizelist.items(), key=lambda x: x[1], reverse=True)
+        print("Sorted filesizelist:")
         print(sortedfilesizelist)
         bestslave = self.slave_requests.get_best_slave()
         slavelist = self.ping_slaves(list(bestslave))
+        print("Best slaves:")
+        print(slavelist)
         add = 0
         for i, s in enumerate(sortedfilesizelist):
-            # TODO send dfgs based on filesize, bigger file to better slave
-            # Size Threshold for file in KiloByte, if below do not send
+            fullfilepath = s[0]
+            print("Offloading: " + str(fullfilepath))
+            file_stats = os.stat(fullfilepath)
+            # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
             if list(bestslave[i+add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
-                print(str(s))
+                print("Filesize below threshold or best slave is itself")
                 with open(fullfilepath) as f:
                     data = json.load(f)
                 json_content = data
@@ -296,7 +302,7 @@ class Slave:
                 while (i + add) < len(slavelist) and not send:
                     print("Add is " + str(add) + " and i " + str(i) + " and send: " + str(send))
                     toreserve = ReserveSlave(str(slavelist[i+add][1][0]), self.master_host, self.master_port, 0)
-                    print("Reserveattempt:" + str(slavelist[i+add][1][0]) + " by " + self.conf + " for file " + filename)
+                    print("Reserveattempt:" + str(slavelist[i+add][1][0]) + " by " + self.conf + " for file " + str(fullfilepath))
                     toreserve.start()
                     toreserve.join()
                     reserveattempt = toreserve.conf
@@ -304,6 +310,7 @@ class Slave:
                     if reserveattempt == 0:
                         besthost = slavelist[i+add][1][1]
                         bestport = slavelist[i+add][1][2]
+                        print("Sending to " + str(slavelist[i+add][1][0]) + " from " + str(self.conf))
                         m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
                         m.start()
                         # notify master that DFG send
@@ -314,20 +321,21 @@ class Slave:
                         add = add + 1
                     elif reserveattempt == 2:
                         add = add + 1
-                # In case all slaves are reserved, or more files than slaves, compute by itself
-                if not send:
-                    with open(fullfilepath) as f:
-                        data = json.load(f)
-                    json_content = data
-                    folder = "parent_dfg"
-                    filename = str(json_content["name"]) + ".json"
-                    if folder not in os.listdir(SlaveVariableContainer.conf):
-                        SlaveVariableContainer.slave.create_folder(folder)
-                    SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
-                    # print(json_content)
-                    SlaveVariableContainer.received_dfgs.update({filename: "notree"})
-                    parent_file = json_content["parent_file"]
-                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
+                    # In case all slaves are reserved, or more files than slaves, compute by itself
+                    if not send:
+                        print("computing by itself")
+                        with open(fullfilepath) as f:
+                            data = json.load(f)
+                        json_content = data
+                        folder = "parent_dfg"
+                        filename = str(json_content["name"]) + ".json"
+                        if folder not in os.listdir(SlaveVariableContainer.conf):
+                            SlaveVariableContainer.slave.create_folder(folder)
+                        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+                        # print(json_content)
+                        SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+                        parent_file = json_content["parent_file"]
+                        SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
             send_file = {filename: "send"}
             SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
 
@@ -388,7 +396,7 @@ class Slave:
                     print("Slaveerror: Parent " + parentfile + " not found")
                     return None
                 else:
-                    print("Slave: Subtree" + subtree_name + " from " + parentfile + "received")
+                    print(self.conf + " saves subtree" + subtree_name + " for " + parentfile + "received")
                     SlaveVariableContainer.send_dfgs[process][parentfile][subtree_name] = "received"
         if self.check_tree(process, parentfile):
             tree = self.result_tree(process, parent)
@@ -403,12 +411,10 @@ class Slave:
         treewithinfo.update({"name": name})
         treewithinfo.update({"parent": res_parent})
         treewithinfo.update(({"process": process}))
-        print("Tree will be send")
-        print("treename:" + name)
-        print("parent name: " + res_parent)
+        print("Sending tree " + name + " back of parent: " + res_parent)
         print(tree)
-        print("host" + host)
-        print("port" + port)
+        # print("host" + host)
+        # print("port" + port)
         m = PostResultTree(self, self.conf, host, port, treewithinfo)
         m.start()
 

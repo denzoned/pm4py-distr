@@ -22,4 +22,5 @@ class CalcDfg(Thread):
         # Might check if it works on bigger files
         with open(self.filename) as f:
             data = json.load(f)
+        print(str(self.filename) + " send by " + str(self.conf))
         r = requests.post(uri, json=data)
