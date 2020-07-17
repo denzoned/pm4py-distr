@@ -1,4 +1,5 @@
 import os
+import socket
 
 ENVIRON_PREFIX = "pm4pydistr"
 PARAMETERS_AUTO_HOST = "--auto-host"
@@ -17,9 +18,9 @@ else:
     PYTHON_PATH = "python"
 BASE_FOLDER_LIST_OPTIONS = ["master"]
 
-THIS_HOST = "127.0.0.1"
+THIS_HOST = socket.gethostbyname(socket.gethostname())
 PORT = 5001
-MASTER_HOST = "127.0.0.1"
+MASTER_HOST = '192.168.192.21'
 MASTER_PORT = 5001
 CONF = "local"
 
