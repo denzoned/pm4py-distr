@@ -6,6 +6,5 @@ netifaces
 psutil
 pyarrow==0.15.1
 pm4pycvxopt==0.0.9
-wmi
 pythonping
 werkzeug

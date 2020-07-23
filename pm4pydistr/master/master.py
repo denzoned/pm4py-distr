@@ -11,7 +11,7 @@ from flask import jsonify
 
 import numpy as np
 import psutil
-import pythoncom
+#import pythoncom
 import requests
 import wmi
 import sys
@@ -885,11 +885,11 @@ class Master:
         net = psutil.net_connections()
 
     def get_temperature(self):
-        pythoncom.CoInitialize()
         # w = wmi.WMI(namespace="root\\wmi")
         # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
         # return temperature_info.CurrentTemperature
         # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+        """pythoncom.CoInitialize()
         w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
         temperature_infos = w.Sensor()
         temp = {}
@@ -899,7 +899,8 @@ class Master:
                 if sensor.Name == 'CPU Package':
                     temp.update({sensor.Name: sensor.Value})
                 # temp.update({sensor.Name: sensor.Value})
-        return temp
+        return temp"""
+        return 0.0
 
     def get_slaves_list2(self):
         # pid = os.getpid()
