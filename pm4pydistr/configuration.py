@@ -20,7 +20,8 @@ if str(os.name) == "posix":
     PYTHON_PATH = "python3"
 else:
     PYTHON_PATH = "python"
-BASE_FOLDER_LIST_OPTIONS = ["master", "/opt/pm4pydistr-share"]
+BASE_FOLDER_LIST_OPTIONS = ["master"]
+#BASE_FOLDER_LIST_OPTIONS = ["master", "/opt/pm4pydistr-share"]
 
 DEFAULT_TYPE = "slave"
 THIS_HOST = "127.0.0.1"
