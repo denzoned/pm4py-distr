@@ -1,5 +1,13 @@
+import json
+import logging
+import math
+import threading
+
+import requests
+from random import randrange
 from threading import Thread
-from pm4pydistr import configuration
+from time import time
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from random import randrange
@@ -16,6 +24,15 @@ from pm4py.objects.log.util import xes
 
 import logging, json
 import sys
+
+from pm4py.objects.log.util import xes
+
+from pm4pydistr import configuration
+from pm4pydistr.configuration import PARAMETER_NO_SAMPLES, DEFAULT_MAX_NO_SAMPLES
+from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS
+from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
+from pm4pydistr.master.db_manager import DbManager
+from pm4pydistr.master.variable_container import MasterVariableContainer
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -73,12 +90,26 @@ def register_slave():
     ip = request.args.get('ip', type=str)
     port = request.args.get('port', type=str)
     conf = request.args.get('conf', type=str)
+    MasterVariableContainer.log_assignment_done = False
+    MasterVariableContainer.slave_loading_requested = False
 
     if keyphrase == configuration.KEYPHRASE:
         id = [randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10), randrange(0, 10),
               randrange(0, 10), randrange(0, 10)]
         id = MasterVariableContainer.dbmanager.insert_slave_into_db(conf, id)
-        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time()]
+        # 0conf, 1host, 2port, 3time, 4PID, 5memory, 6CPUpct, 7cpuload, 8DiskUsage, 9temp, 10OS, 11ResTempSave,
+        # 12Resourcefctvalue, 13 iowait
+        # OS: 0 Linux, 1 MAC, 2 Windows
+        # ResTempSave: RAM, CPU, Disk
+        MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
+        try:
+            r2 = requests.get(
+                "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
+            response = json.loads(r2.text)
+            MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
+        except:
+            del MasterVariableContainer.master.slaves[str(id)]
+            return "Error while registering Slave"
         return jsonify({"id": str(id)})
 
 
@@ -93,21 +124,30 @@ def update_slave():
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time()]
+        MasterVariableContainer.master.slaves[id] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
         return jsonify({"id": id})
 
 
 @MasterSocketListener.app.route("/pingFromSlave", methods=["GET"])
 def ping_from_slave():
     check_master_initialized()
-
+    received_time = int(round(time() * 1000))
     keyphrase = request.args.get('keyphrase', type=str)
     id = request.args.get('id', type=str)
+    port = request.args.get('port', type=str)
     conf = request.args.get('conf', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
-        MasterVariableContainer.master.slaves[id][3] = time()
-        return jsonify({"id": id})
+        try:
+            # pingadrr = str(ip) + ':' + str(port)
+            # response_list = ping('8.8.8.8', size=40, count=10)
+            # pinged = response_list.rtt_avg_ms
+            MasterVariableContainer.master.slaves[id][3] = time()
+        except requests.exceptions.RequestException as e:
+            # del MasterVariableContainer.master.slaves[id]
+            pass
+
+    return jsonify({"id": id})
 
 
 @MasterSocketListener.app.route("/getLoadingStatus", methods=["GET"])
@@ -133,6 +173,7 @@ def do_log_assignment():
     keyphrase = request.args.get('keyphrase', type=str)
 
     if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.check_slaves()
         MasterVariableContainer.master.do_assignment()
         MasterVariableContainer.master.make_slaves_load()
 
@@ -146,6 +187,16 @@ def check_versions():
     return jsonify({"pm4py": pm4py.__version__, "pm4pydistr": pm4pydistr.__version__})
 
 
+@MasterSocketListener.app.route("/checkSlaves", methods=["GET"])
+def check_slaves():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.check_slaves()
+
+    return jsonify({})
+
+
 @MasterSocketListener.app.route("/getSlavesList", methods=["GET"])
 def get_slaves_list():
     check_master_initialized()
@@ -155,6 +206,15 @@ def get_slaves_list():
     if keyphrase == configuration.KEYPHRASE:
         return jsonify(
             {"slaves": MasterVariableContainer.master.slaves, "uuid": MasterVariableContainer.master.unique_identifier})
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getSlavesList2", methods=["GET"])
+def get_slaves_list2():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        return str(MasterVariableContainer.master.slaves.keys())
     return jsonify({})
 
 
@@ -436,7 +496,6 @@ def get_cases():
     if keyphrase == configuration.KEYPHRASE:
         cases = MasterVariableContainer.master.get_cases(session, process, use_transition, no_samples,
                                                          window_size=window_size, start=start)
-
         return jsonify(cases)
     return jsonify({"cases_list": [], "events": 0, "cases": 0})
 
@@ -456,7 +515,8 @@ def get_events():
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
 
     if keyphrase == configuration.KEYPHRASE:
-        events = MasterVariableContainer.master.get_events(session, process, use_transition, no_samples, case_id)
+        events = MasterVariableContainer.master.get_events(session, process, use_transition, no_samples,
+                                                           case_id)
 
         return jsonify({"events": events})
 
@@ -506,7 +566,8 @@ def get_events_per_case():
     max_no_ret_items = request.args.get(PARAMETER_NUM_RET_ITEMS, type=int, default=DEFAULT_WINDOW_SIZE)
 
     if keyphrase == configuration.KEYPHRASE:
-        events = MasterVariableContainer.master.get_events_per_case(session, process, use_transition, no_samples,
+        events = MasterVariableContainer.master.get_events_per_case(session, process, use_transition,
+                                                                    no_samples,
                                                                     max_ret_items=max_no_ret_items)
 
         return jsonify({"events_case": events})
@@ -530,8 +591,8 @@ def get_events_per_time():
     timestamp_key = request.args.get('timestamp_key', type=str, default=xes.DEFAULT_TIMESTAMP_KEY)
 
     if keyphrase == configuration.KEYPHRASE:
-        points = MasterVariableContainer.master.get_events_per_time(session, process, use_transition, no_samples,
-                                                                    max_ret_items=max_no_ret_items,
+        points = MasterVariableContainer.master.get_events_per_time(session, process, use_transition,
+                                                                    no_samples, max_ret_items=max_no_ret_items,
                                                                     timestamp_key=timestamp_key)
 
         return jsonify({"points": points})
@@ -554,7 +615,8 @@ def get_events_per_time_first():
     max_no_ret_items = request.args.get(PARAMETER_NUM_RET_ITEMS, type=int, default=DEFAULT_WINDOW_SIZE)
 
     if keyphrase == configuration.KEYPHRASE:
-        points = MasterVariableContainer.master.get_events_per_time_first(session, process, use_transition, no_samples,
+        points = MasterVariableContainer.master.get_events_per_time_first(session, process, use_transition,
+                                                                          no_samples,
                                                                           max_ret_items=max_no_ret_items)
 
         return jsonify({"points": points})
@@ -635,7 +697,8 @@ def perform_alignments():
     align_variant = content["align_variant"]
 
     if keyphrase == configuration.KEYPHRASE:
-        alignments = MasterVariableContainer.master.perform_alignments(session, process, use_transition, no_samples,
+        alignments = MasterVariableContainer.master.perform_alignments(session, process, use_transition,
+                                                                       no_samples,
                                                                        petri_string, var_list,
                                                                        max_align_time=max_align_time,
                                                                        max_align_time_trace=max_align_time_trace,
@@ -670,7 +733,8 @@ def perform_tbr():
         "consider_remaining_in_fitness"] if "consider_remaining_in_fitness" in content else False
 
     if keyphrase == configuration.KEYPHRASE:
-        tbr = MasterVariableContainer.master.perform_tbr(session, process, use_transition, no_samples, petri_string,
+        tbr = MasterVariableContainer.master.perform_tbr(session, process, use_transition, no_samples,
+                                                         petri_string,
                                                          var_list, enable_parameters_precision,
                                                          consider_remaining_in_fitness)
         return jsonify({"tbr": tbr})
@@ -692,3 +756,371 @@ def do_shutdown():
         MasterVariableContainer.master.perform_shutdown(session, process, use_transition, no_samples)
 
     return jsonify({})
+
+
+@MasterSocketListener.app.route("/getRunningProcesses", methods=["GET"])
+def get_running_processes():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_running_processes()
+        return jsonify({"processes": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getOS", methods=["GET"])
+def get_OS():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_OS()
+        return jsonify({"OS": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getCPU", methods=["GET"])
+def get_CPU():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_CPU()
+        return jsonify({"CPUpct": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getCPUload", methods=["GET"])
+def get_CPUload():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_CPUload()
+        return jsonify({"CPUload": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getcurrentPIDinfo", methods=["GET"])
+def get_current_PID_info():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_current_PID_info()
+        return jsonify({"PID": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getMemory", methods=["GET"])
+def get_memory():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_memory()
+        return jsonify({"Memory": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getTemperature", methods=["GET"])
+def get_temp():
+    keyphrase = request.args.get('keyphrase', type=str)
+    # only for Windows
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_temperature()
+        return jsonify({"Temperature": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/getDiskUsage", methods=["GET"])
+def get_diskusage():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = MasterVariableContainer.master.get_disk_usage()
+        return jsonify({"Disk Usage": points})
+
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/simpleIMD", methods=["GET"])
+def simple_IMD():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        discoverimdfc = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
+                                                                  attribute_key)
+        # return discoverimdfb
+        return jsonify({"Computed": str(discoverimdfc)})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/distributedIMD", methods=["GET"])
+def distr_IMD():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+    if keyphrase == configuration.KEYPHRASE:
+        discoverimdfc = MasterVariableContainer.master.distr_imd(process)
+        return jsonify({"IMD": "started, for results go to /resultIMD"})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/resultIMD", methods=["GET"])
+def result_IMD():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        if MasterVariableContainer.tree_found:
+            tree = MasterVariableContainer.master.result_tree(process)
+            return jsonify(tree)
+        return jsonify({"Tree": "not found"})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/getStatus", methods=["GET"])
+def get_status():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        return jsonify(MasterVariableContainer.send_dfgs)
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/sendTree", methods=["GET", "POST"])
+def return_tree():
+    keyphrase = request.args.get('keyphrase', type=str)
+    # process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        tree_name = json_content["name"]
+        print("Master received: " + tree_name)
+        parent = json_content["parent"]
+        subtree = json_content["subtree"]
+        process = json_content["process"]
+        if parent == "m":
+            MasterVariableContainer.master.save_subtree("returned_trees", tree_name, subtree, process)
+        else:
+            print("Parent" + parent + "not m")
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/RAMfunction", methods=["GET"])
+def ram_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    # id = request.args.get('id', type=str)
+    k = request.args.get('k', type=float)
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        if type(k) == float:
+            resource = MasterVariableContainer.master.res_ram(k)
+            return str(k)
+        else:
+            resource = MasterVariableContainer.master.res_ram(configuration.DEFAULT_K)
+            return "10"
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/initialize", methods=["GET"])
+def initialize():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    # do_all set 1 to calcDFG, 0 only log assignment
+    doall = request.args.get('doall', type=int)
+
+    # clean set 1 to remove old files in slaves
+    clean = request.args.get('clean', type=int)
+
+    if keyphrase == configuration.KEYPHRASE:
+        thread = threading.Thread(
+            target=MasterVariableContainer.master.master_init(session, process, use_transition, no_samples,
+                                                              attribute_key, doall, clean))
+        thread.start()
+        thread.join()
+        if clean == 1:
+            print('Max RAM calc & folder removement done')
+        else:
+            print('Max RAM calc')
+        m1 = threading.Thread(target=MasterVariableContainer.master.check_slaves())
+        m1.start()
+        m1.join()
+        print('slaves checked')
+        m2 = threading.Thread(target=MasterVariableContainer.master.do_assignment())
+        m2.start()
+        m2.join()
+        print('assignment done')
+        m3 = threading.Thread(target=MasterVariableContainer.master.make_slaves_load())
+        m3.start()
+        m3.join()
+        print('slaves loaded')
+        if doall is 1:
+            print('DFG calculating')
+            if MasterVariableContainer.log_assignment_done is True and MasterVariableContainer.slave_loading_requested is True:
+                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
+                                                             attribute_key)
+                print('DFG calculated')
+        return jsonify({"Initialization": 'done'})
+    return jsonify({"Wrong Keyphrase": {}})
+
+
+@MasterSocketListener.app.route("/CPUfunction", methods=["GET"])
+def cpu_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    # id = request.args.get('id', type=str)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        resource = MasterVariableContainer.master.res_cpu()
+        return jsonify({"CPUfct": resource})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/DISKfunction", methods=["GET"])
+def disk_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    # id = request.args.get('id', type=str)
+
+    use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
+    no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.perform_shutdown(session, process, use_transition, no_samples)
+
+        resource = MasterVariableContainer.master.res_disk()
+        return jsonify({"DISKfct": resource})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/reserveSlave", methods=["GET"])
+def reserve_fct():
+    # returns the state of reservation, changed if possible
+    keyphrase = request.args.get('keyphrase', type=str)
+    slave = request.args.get('slave', type=str)
+    # Slave will be unlocked after DFG send
+    unlock = request.args.get('unlock', type=str)
+    # replace a with reserved_slaves
+    print("Reserveattempt: " + str(slave) + ", unlock: " + str(unlock))
+    if keyphrase == configuration.KEYPHRASE:
+        if slave in MasterVariableContainer.reserved_slaves:
+            # print("slave in reservation list")
+            if MasterVariableContainer.reserved_slaves[slave] == 1:
+                if int(unlock) == 1:
+                    MasterVariableContainer.reserved_slaves[slave] = 2
+                    print(MasterVariableContainer.reserved_slaves)
+                    return jsonify({"Reservation": 2})
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 1})
+            if MasterVariableContainer.reserved_slaves[slave] == 0:
+                MasterVariableContainer.reserved_slaves[slave] = 1
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 0})
+            if MasterVariableContainer.reserved_slaves[slave] == 2:
+                print(MasterVariableContainer.reserved_slaves)
+                return jsonify({"Reservation": 2})
+            # If set to 1 or 2
+        # If nor reserved or not in dict yet
+        else:
+            MasterVariableContainer.reserved_slaves.update({slave: 1})
+            print(MasterVariableContainer.reserved_slaves)
+            # But response will be 0 to say it was not reserved and could be reserved successfully
+            return jsonify({"Reservation": 0})
+    return jsonify({})
+
+
+@MasterSocketListener.app.route("/resAllFct", methods=["GET"])
+def resall_fct():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    cpu = request.args.get('cpu', type=float)
+    ram = request.args.get('ram', type=float)
+    disk = request.args.get('disk', type=float)
+    k = request.args.get('k', type=float)
+
+    if keyphrase == configuration.KEYPHRASE:
+        if type(cpu) == float and type(ram) == float and type(disk) == float:
+            if type(k) == float:
+                resource = MasterVariableContainer.master.res_all(ram, cpu, disk, k)
+                return jsonify({"Resource Allocation Function": resource})
+            else:
+                resource = MasterVariableContainer.master.res_all(ram, cpu, disk, configuration.DEFAULT_K)
+                return jsonify({"Resource Allocation Function": resource})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/sendRes", methods=["GET", "POST"])
+def send_res():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    cpuload = request.args.get('CPUload', type=str)
+    cpupct = request.args.get('CPUpct', type=str)
+    ram = request.args.get('ram', type=str)
+    disk = request.args.get('disk', type=str)
+    k = request.args.get('k', type=str)
+    id = request.args.get('id', type=str)
+    memory = request.args.get('memory')
+    diskusage = request.args.get('diskusage')
+    temp = request.args.get('temp')
+    oss = request.args.get('os')
+    iowait = request.args.get('iowait')
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.slaves[str(id)][5] = eval(memory)
+        MasterVariableContainer.master.slaves[str(id)][6] = eval(cpupct)
+        MasterVariableContainer.master.slaves[str(id)][7] = json.loads(cpuload)
+        MasterVariableContainer.master.slaves[str(id)][8] = eval(diskusage)
+        MasterVariableContainer.master.slaves[str(id)][9] = eval(temp)
+        MasterVariableContainer.master.slaves[str(id)][10] = int(oss)
+        MasterVariableContainer.master.slaves[str(id)][13] = eval(iowait)
+        b = True
+        for s in MasterVariableContainer.master.slaves:
+            if MasterVariableContainer.master.slaves[s][5] == 1:
+                b = False
+        if b == True:
+            MasterVariableContainer.all_resources_received = True
+        return jsonify({"Saved": memory})
+    return jsonify({"Error": {}})
+
+
+@MasterSocketListener.app.route("/getBestSlave", methods=["GET"])
+def get_bestslave():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.get_best_slave()
+        return jsonify({"Slaves": MasterVariableContainer.best_slave})
+    return jsonify({"Error": {}})

@@ -1,6 +1,8 @@
+import shutil
+import threading
 from threading import Thread
 from pm4pydistr import configuration
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, flash, redirect, url_for
 from flask_cors import CORS
 from pm4pydistr.slave.variable_container import SlaveVariableContainer
 from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
@@ -9,13 +11,20 @@ import pm4py
 import pm4pydistr
 from pm4py.util import constants as pm4py_constants
 from pm4py.objects.log.util import xes
-from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS, DEFAULT_WINDOW_SIZE, PARAMETER_WINDOW_SIZE, PARAMETER_START
+from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS, DEFAULT_WINDOW_SIZE, PARAMETER_WINDOW_SIZE, \
+    PARAMETER_START
 from pm4pydistr.log_handlers import parquet as parquet_handler
 import traceback
 
 import os
 import json
 import sys
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+
+import os
+import json
+import pickle
 
 import logging
 
@@ -46,7 +55,7 @@ def check_versions():
     return jsonify({"pm4py": pm4py.__version__, "pm4pydistr": pm4pydistr.__version__})
 
 
-@SlaveSocketListener.app.route("/synchronizeFiles", methods=["POST"])
+@SlaveSocketListener.app.route("/synchronizeFiles", methods=["POST", "GET"])
 def synchronize_files():
     keyphrase = request.args.get('keyphrase', type=str)
     if keyphrase == configuration.KEYPHRASE:
@@ -58,11 +67,90 @@ def synchronize_files():
             SlaveVariableContainer.managed_logs[log_folder] = None
             SlaveVariableContainer.managed_logs[log_folder] = []
 
+            if not os.path.isdir(SlaveVariableContainer.conf):
+                os.mkdir(os.path.join(SlaveVariableContainer.conf))
             if log_folder not in os.listdir(SlaveVariableContainer.conf):
                 SlaveVariableContainer.slave.create_folder(log_folder)
             for log_name in json_content["logs"][log_folder]:
                 SlaveVariableContainer.slave.load_log(log_folder, log_name)
                 SlaveVariableContainer.managed_logs[log_folder].append(log_name)
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/sendDFG", methods=["POST", "GET"])
+def send_dfg():
+    keyphrase = request.args.get('keyphrase', type=str)
+    send_host = request.args.get('host', type=str)
+    send_port = request.args.get('port', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        # try:
+        #    json_content = json.loads(request.data)
+        # except:
+        #    json_content = json.loads(request.data.decode('utf-8'))
+        json_content = request.json
+        folder = "parent_dfg"
+        filename = str(json_content["name"]) + ".json"
+        if folder not in os.listdir(SlaveVariableContainer.conf):
+            SlaveVariableContainer.slave.create_folder(folder)
+        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+        # print(json_content)
+        SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+        parent_file = json_content["parent_file"]
+        SlaveVariableContainer.slave.slave_distr(filename, parent_file, send_host, send_port)
+        # print(jsonify(tree))
+        # return jsonify({'tree': tree})
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/sendTree", methods=["GET", "POST"])
+def return_tree():
+    keyphrase = request.args.get('keyphrase', type=str)
+    # process = request.args.get('process', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        tree_name = json_content["name"]
+        parent = json_content["parent"]
+        subtree = json_content["subtree"]
+        process = json_content["process"]
+        SlaveVariableContainer.slave.save_subtree("returned_trees", tree_name, subtree, process, parent)
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
+def master_dfg():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        json_content = request.json
+        folder = "parent_dfg"
+        filename = "masterdfg.json"
+        SlaveVariableContainer.managed_dfgs[folder] = []
+        if folder not in os.listdir(SlaveVariableContainer.conf):
+            SlaveVariableContainer.slave.create_folder(folder)
+        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+        # print(json_content)
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getStatus", methods=["GET"])
+def get_status():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        status = {}
+        status["send dfgs"] = SlaveVariableContainer.send_dfgs
+        status["received"] = SlaveVariableContainer.received_dfgs
+        status["found cuts"] = SlaveVariableContainer.found_cuts
+        return jsonify(status)
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/removeOldFiles", methods=["GET"])
+def remove_files():
+    keyphrase = request.args.get('keyphrase', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        m = threading.Thread(target=SlaveVariableContainer.slave.remove_folder())
+        m.start()
+        m.join()
+        return jsonify({'Folder': 'removed'})
     return jsonify({})
 
 
@@ -317,11 +405,9 @@ def calculate_attribute_names():
             parameters["filters"] = filters
             parameters[PARAMETER_USE_TRANSITION] = use_transition
             parameters[PARAMETER_NO_SAMPLES] = no_samples
-
             returned_list = parquet_handler.get_attribute_names(SlaveVariableContainer.conf, process,
                                                                 SlaveVariableContainer.managed_logs[process],
                                                                 parameters=parameters)
-
             return jsonify({"names": returned_list})
         return jsonify({"names": {}})
     except:
@@ -577,8 +663,8 @@ def get_events_per_time_first():
             parameters["max_no_of_points_to_sample"] = max_no_ret_items
 
             returned_list = parquet_handler.get_events_per_time_first(SlaveVariableContainer.conf, process,
-                                                                SlaveVariableContainer.managed_logs[process],
-                                                                parameters=parameters)
+                                                                      SlaveVariableContainer.managed_logs[process],
+                                                                      parameters=parameters)
 
             return jsonify({"points": returned_list})
 
@@ -774,8 +860,6 @@ def do_shutdown():
         keyphrase = request.args.get('keyphrase', type=str)
         process = request.args.get('process', type=str)
 
-        no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
-
         if keyphrase == configuration.KEYPHRASE:
             # do shutdown
             os._exit(0)
@@ -783,3 +867,104 @@ def do_shutdown():
         return jsonify({})
     except:
         return traceback.format_exc()
+
+
+@SlaveSocketListener.app.route("/getcurrentPIDinfo", methods=["GET"])
+def get_current_PID_info():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_current_PID_info()
+        return jsonify({"PID": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getMemory", methods=["GET"])
+def get_memory():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_memory()
+        return jsonify({"Memory": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getCPU", methods=["GET"])
+def get_CPU():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_CPU()
+        return jsonify({"CPU": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getCPUload", methods=["GET"])
+def get_CPUload():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_load()
+        return jsonify({"CPUload": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getTemperature", methods=["GET"])
+def get_temp():
+    keyphrase = request.args.get('keyphrase', type=str)
+    operatingsystem = request.args.get('operatingsystem', type=str)
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_temperature(operatingsystem)
+        return jsonify({"Temperature": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getOS", methods=["GET"])
+def get_OS():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_OS()
+        return jsonify({"OS": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getDiskUsage", methods=["GET"])
+def get_diskusage():
+    keyphrase = request.args.get('keyphrase', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_disk_usage()
+        return jsonify({"Disk Usage": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getIOWait", methods=["GET"])
+def get_iowait():
+    keyphrase = request.args.get('keyphrase', type=str)
+    operatingsystem = request.args.get('operatingsystem', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_iowait(operatingsystem)
+        return jsonify({"IOWait": points})
+
+    return jsonify({})
+
+
+@SlaveSocketListener.app.route("/getResources", methods=["GET"])
+def get_resources():
+    keyphrase = request.args.get('keyphrase', type=str)
+    operatingsystem = request.args.get('operatingsystem', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        points = SlaveVariableContainer.slave.get_resources()
+        return jsonify(points)
+
+    return jsonify({})
