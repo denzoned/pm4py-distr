@@ -13,7 +13,7 @@ import numpy as np
 import psutil
 #import pythoncom
 import requests
-import wmi
+#import wmi
 import sys
 import pickle
 import re
@@ -900,7 +900,7 @@ class Master:
                     temp.update({sensor.Name: sensor.Value})
                 # temp.update({sensor.Name: sensor.Value})
         return temp"""
-        return 0.0
+        return 50.0
 
     def get_slaves_list2(self):
         # pid = os.getpid()

@@ -20,8 +20,8 @@ import uuid
 import socket
 from contextlib import closing
 
-import pythoncom
-import wmi
+#import pythoncom
+#import wmi
 import os
 from sys import platform as _platform
 import shutil
@@ -181,6 +181,8 @@ class Slave:
 
     def get_temperature(self, operatingsystem):
         if operatingsystem == "2":
+            import pythoncom
+            import wmi
             pythoncom.CoInitialize()
             # w = wmi.WMI(namespace="root\\wmi")
             # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
