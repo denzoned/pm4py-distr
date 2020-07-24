@@ -138,7 +138,6 @@ class Master:
             all_slaves = list([eval(x) for x in self.slaves.keys()])
             for slave in all_slaves:
                 self.sublogs_correspondence[str(slave)] = {}
-            print("BBBBBBBBBBBB", all_slaves)
 
             for folder in self.sublogs_id:
                 all_logs = list(self.sublogs_id[folder])
@@ -150,7 +149,6 @@ class Master:
                     distances = sorted(
                         [(x, np.linalg.norm(np.array(x) - np.array(self.sublogs_id[folder][log])), self.slaves[str(x)])
                          for x in all_slaves], key=lambda x: (x[1], x[2]))
-                    print("AAAAAAAAAAAAAAAAAAAAAAAAAAA", distances, self.sublogs_correspondence)
 
                     self.sublogs_correspondence[str(distances[0][0])][folder].append(log)
 
