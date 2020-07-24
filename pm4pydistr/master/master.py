@@ -157,6 +157,9 @@ class Master:
             MasterVariableContainer.log_assignment_done = True
 
     def check_slaves(self):
+        pass
+        # disabling this
+        """
         all_slaves = list(self.slaves.keys())
 
         for slave in all_slaves:
@@ -171,6 +174,7 @@ class Master:
                 del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
                 MasterVariableContainer.slave_loading_requested = False
+        """
 
     def make_slaves_load(self):
         if not MasterVariableContainer.slave_loading_requested:
