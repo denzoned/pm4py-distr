@@ -4,7 +4,7 @@ import subprocess
 from collections import Counter
 
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
-    PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST, SIZE_THRESHOLD
+    PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST, PARAMETERS_AUTO_PORT, SIZE_THRESHOLD
 from pm4pydistr.discovery.imd import cut_detection
 
 from pm4pydistr.slave.slave_service import SlaveSocketListener
@@ -18,8 +18,10 @@ from pm4pydistr.slave.reserve_rqst import ReserveSlave
 from pm4pydistr.slave.post_result_tree import PostResultTree
 import uuid
 import socket
-import pythoncom
-import wmi
+from contextlib import closing
+
+#import pythoncom
+#import wmi
 import os
 from sys import platform as _platform
 import shutil
@@ -40,6 +42,21 @@ def decode_json_dfg(dfg):
     return dfglist
 
 
+import time
+
+from pm4py.algo.conformance.alignments.versions import dijkstra_no_heuristics, state_equation_a_star, \
+    dijkstra_less_memory
+from pm4py.algo.conformance.decomp_alignments.versions import recompos_maximal
+from pm4py.algo.conformance.tokenreplay.versions import token_replay
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
 class Slave:
     def __init__(self, parameters):
         self.parameters = parameters
@@ -49,12 +66,10 @@ class Slave:
         self.master_port = str(parameters[PARAMETERS_MASTER_PORT])
         self.conf = parameters[PARAMETERS_CONF]
         if PARAMETERS_AUTO_HOST in parameters and parameters[PARAMETERS_AUTO_HOST] == "1":
-            # import netifaces as ni
             self.conf = str(uuid.uuid4())
             self.host = str(socket.gethostname())
-            # ni.ifaddresses('eth0')
-            # ip = ni.ifaddresses('eth0')[ni.AF_INET][0]['addr']
-            # self.master_host = str(ip)
+        if PARAMETERS_AUTO_PORT in parameters and parameters[PARAMETERS_AUTO_PORT] == "1":
+            self.port = str(find_free_port())
         self.id = None
         self.ping_module = None
         self.pid = None
@@ -73,10 +88,16 @@ class Slave:
         if not os.path.exists(self.conf):
             os.mkdir(self.conf)
 
+        # sleep a while before taking the slaves up :)
+        time.sleep(2)
+
         self.slave_requests = SlaveRequests(self, self.host, self.port, self.master_host, self.master_port, self.conf)
 
         self.service = SlaveSocketListener(self, self.host, self.port, self.master_host, self.master_port, self.conf)
         self.service.start()
+
+        # sleep a while before taking the slaves up :)
+        time.sleep(2)
 
         self.slave_requests.register_to_webservice()
 
@@ -160,6 +181,8 @@ class Slave:
 
     def get_temperature(self, operatingsystem):
         if operatingsystem == "2":
+            import pythoncom
+            import wmi
             pythoncom.CoInitialize()
             # w = wmi.WMI(namespace="root\\wmi")
             # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
@@ -179,7 +202,7 @@ class Slave:
                 print("Start Hardwaremonitor")
                 return "start Hardwaremonitor"
         else:
-        # TODO placeholder for Linuxversion
+            # TODO placeholder for Linuxversion
             temp = 50
         return temp
 
@@ -198,7 +221,7 @@ class Slave:
         return disk
 
     def get_networkping(self):
-        #ping = ping()
+        # ping = ping()
         return None
 
     def get_resources(self):
@@ -210,7 +233,8 @@ class Slave:
         self.CPUload = self.get_load()
         self.CPUpct = self.get_CPU()
         self.iowait = self.get_iowait(self.os)
-        jsonfile = {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload, "diskusage": self.diskusage, "temp": self.temp, "os": self.os, "iowait": self.iowait}
+        jsonfile = {"memory": self.memory, "cpupct": self.CPUpct, "cpuload": self.CPUload, "diskusage": self.diskusage,
+                    "temp": self.temp, "os": self.os, "iowait": self.iowait}
         return jsonfile
 
     def slave_distr(self, filename, parentfile, sendhost, sendport):
@@ -226,8 +250,10 @@ class Slave:
                     initial_start_activities = data["initial_start"]
                     initial_end_activities = data["initial_end"]
                     process = data["process"]
-                    cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"], initial_start_activities, initial_end_activities, data['activities'])
-                    SlaveVariableContainer.found_cuts.update({filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
+                    cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"],
+                                                   initial_start_activities, initial_end_activities, data['activities'])
+                    SlaveVariableContainer.found_cuts.update(
+                        {filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                     tree = {}
                     if cut == "seq":
                         self.send_child_dfgs(process, cut, filename)
@@ -268,7 +294,7 @@ class Slave:
             if not self.checkKey(SlaveVariableContainer.send_dfgs[process][parent], filename):
                 fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
                 file_stats = os.stat(fullfilepath)
-                filesizelist[fullfilepath] = file_stats.st_size/1024
+                filesizelist[fullfilepath] = file_stats.st_size / 1024
         sortedfilesizelist = sorted(filesizelist.items(), key=lambda x: x[1], reverse=True)
         print("Sorted filesizelist:")
         print(sortedfilesizelist)
@@ -282,7 +308,7 @@ class Slave:
             print("Offloading: " + str(fullfilepath))
             file_stats = os.stat(fullfilepath)
             # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
-            if list(bestslave[i+add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
+            if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
                 print("Filesize below threshold or best slave is itself")
                 with open(fullfilepath) as f:
                     data = json.load(f)
@@ -301,16 +327,17 @@ class Slave:
                 send = False
                 while (i + add) < len(slavelist) and not send:
                     print("Add is " + str(add) + " and i " + str(i) + " and send: " + str(send))
-                    toreserve = ReserveSlave(str(slavelist[i+add][1][0]), self.master_host, self.master_port, 0)
-                    print("Reserveattempt:" + str(slavelist[i+add][1][0]) + " by " + self.conf + " for file " + str(fullfilepath))
+                    toreserve = ReserveSlave(str(slavelist[i + add][1][0]), self.master_host, self.master_port, 0)
+                    print("Reserveattempt:" + str(slavelist[i + add][1][0]) + " by " + self.conf + " for file " + str(
+                        fullfilepath))
                     toreserve.start()
                     toreserve.join()
                     reserveattempt = toreserve.conf
                     print("Return of reservation: " + str(reserveattempt))
                     if reserveattempt == 0:
-                        besthost = slavelist[i+add][1][1]
-                        bestport = slavelist[i+add][1][2]
-                        print("Sending to " + str(slavelist[i+add][1][0]) + " from " + str(self.conf))
+                        besthost = slavelist[i + add][1][1]
+                        bestport = slavelist[i + add][1][2]
+                        print("Sending to " + str(slavelist[i + add][1][0]) + " from " + str(self.conf))
                         m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
                         head, tail = os.path.split(fullfilepath)
                         filename = tail
@@ -363,9 +390,9 @@ class Slave:
                 # We use for bandwidth a fixed variable, which is not dynamic, as it is easier and for closed environment should be more or less stable
                 # In Kilobits per second
                 # Delay should be 10s of microseconds, ping is in microseconds
-                delay = time_for_ping/10
+                delay = time_for_ping / 10
                 # network metric value for connecting slave
-                network_metric = 256*(pow(10, 4)/bandwidth + delay)
+                network_metric = 256 * (pow(10, 4) / bandwidth + delay)
                 ranglist.update({i: network_metric})
             if slave_list[i][1][1] == self.host:
                 ranglist.update({i: 10000000000000})
@@ -378,7 +405,8 @@ class Slave:
                     ranglist[n] = number
 
         for index, m in enumerate(slave_list):
-            value = ((1-(ranglist[index]/len(slave_list))) * SlaveVariableContainer.network_multiplier + slave_list[index][1][12])/(SlaveVariableContainer.network_multiplier + 1)
+            value = ((1 - (ranglist[index] / len(slave_list))) * SlaveVariableContainer.network_multiplier +
+                     slave_list[index][1][12]) / (SlaveVariableContainer.network_multiplier + 1)
             slave_list[index][1][12] = value
         list.sort(slave_list, key=lambda x: x[1][12], reverse=True)
         return slave_list
@@ -482,3 +510,43 @@ class Slave:
                     dfglist.append(temp)
             # print(dfglist)
         return dfglist
+
+
+def perform_alignments(petri_string, var_list, parameters=None):
+    if parameters is None:
+        parameters = {}
+
+    variant = parameters["align_variant"] if "align_variant" in parameters else "dijkstra_no_heuristics"
+    parameters["ret_tuple_as_trans_desc"] = True
+
+    if variant == "dijkstra_no_heuristics":
+        return dijkstra_no_heuristics.apply_from_variants_list_petri_string(var_list, petri_string,
+                                                                            parameters=parameters)
+    elif variant == "state_equation_a_star":
+        return state_equation_a_star.apply_from_variants_list_petri_string(var_list, petri_string,
+                                                                           parameters=parameters)
+    elif variant == "dijkstra_less_memory":
+        return dijkstra_less_memory.apply_from_variants_list_petri_string(var_list, petri_string, parameters=parameters)
+    elif variant == "recomp_maximal":
+        return recompos_maximal.apply_from_variants_list_petri_string(var_list, petri_string, parameters=parameters)
+
+
+def perform_token_replay(petri_string, var_list, parameters=None):
+    if parameters is None:
+        parameters = {}
+
+    enable_parameters_precision = parameters[
+        "enable_parameters_precision"] if "enable_parameters_precision" in parameters else False
+    consider_remaining_in_fitness = parameters[
+        "consider_remaining_in_fitness"] if "consider_remaining_in_fitness" in parameters else True
+
+    parameters["return_names"] = True
+
+    if enable_parameters_precision:
+        parameters["consider_remaining_in_fitness"] = False
+        parameters["try_to_reach_final_marking_through_hidden"] = False
+        parameters["walk_through_hidden_trans"] = True
+        parameters["stop_immediately_unfit"] = True
+        parameters["consider_remaining_in_fitness"] = consider_remaining_in_fitness
+
+    return token_replay.apply_variants_list_petri_string(var_list, petri_string, parameters=parameters)

@@ -11,9 +11,9 @@ from flask import jsonify
 
 import numpy as np
 import psutil
-import pythoncom
+#import pythoncom
 import requests
-import wmi
+#import wmi
 import sys
 import pickle
 import re
@@ -22,7 +22,6 @@ from pm4py.util import points_subset
 # from pm4py.algo.discovery.inductive.versions.dfg.imdfb import apply_dfg
 
 from pm4pydistr import configuration
-from pm4pydistr.configuration import DEFAULT_MAX_NO_RET_ITEMS
 from pm4pydistr.configuration import KEYPHRASE
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS
 from pm4pydistr.master.master_service import MasterSocketListener
@@ -36,7 +35,30 @@ from pm4pydistr.master.rqsts.dfg_calc_request import DfgCalcRequest
 from pm4pydistr.master.rqsts.ea_request import EaRequest
 from pm4pydistr.master.rqsts.events import EventsRequest
 from pm4pydistr.master.rqsts.events_dotted_request import EventsDottedRequest
+from pm4pydistr.master.rqsts.events_per_case_requests import EventsPerCaseRequest
 from pm4pydistr.master.rqsts.events_per_time_request import EventsPerTimeRequest
+from pm4pydistr.master.rqsts.events_per_time_first_request import EventsPerTimeFirstRequest
+from pm4pydistr.master.rqsts.case_duration_request import CaseDurationRequest
+from pm4pydistr.master.rqsts.numeric_attribute_request import NumericAttributeRequest
+from pm4pydistr.master.rqsts.caching_request import CachingRequest
+from pm4pydistr.master.rqsts.conf_align_request import AlignRequest
+from pm4pydistr.master.rqsts.conf_tbr_request import TbrRequest
+from pm4pydistr.master.rqsts.shutdown_request import ShutdownRequest
+import math
+import uuid
+
+from pathlib import Path
+from random import randrange
+import os
+import numpy as np
+from collections import Counter
+from pm4pydistr.master.session_checker import SessionChecker
+from pm4pydistr.configuration import DEFAULT_WINDOW_SIZE
+from pm4py.util import points_subset
+from pm4py.objects.log.util import xes
+import time
+import sys
+
 from pm4pydistr.master.rqsts.filter_request import FilterRequest
 from pm4pydistr.master.rqsts.log_summ_request import LogSummaryRequest
 from pm4pydistr.master.rqsts.master_assign_request import MasterAssignRequest
@@ -55,9 +77,12 @@ from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
 from pm4pydistr.discovery.imd import cut_detection
 from pm4pydistr.master.rqsts.send_master_dfg import MasterDfgRequest
 
+
 class Master:
     def __init__(self, parameters):
         self.parameters = parameters
+
+        self.unique_identifier = str(uuid.uuid4())
 
         self.host = parameters[PARAMETERS_HOST]
         self.port = str(parameters[PARAMETERS_PORT])
@@ -78,10 +103,12 @@ class Master:
         self.session_checker = SessionChecker(self)
         self.session_checker.start()
 
+        # wait that the master really comes up
+        time.sleep(0.5)
+
+        MasterVariableContainer.master_initialization_done = True
         self.init_dfg = {}
         self.imdtime = datetime
-        # MasterVariableContainer.master.host = "localhost"
-        # MasterVariableContainer.master.port = self.port
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -128,6 +155,9 @@ class Master:
             MasterVariableContainer.log_assignment_done = True
 
     def check_slaves(self):
+        pass
+        # disabling this
+        """
         all_slaves = list(self.slaves.keys())
 
         for slave in all_slaves:
@@ -138,9 +168,11 @@ class Master:
                 if str(pid1) == str(pid2["pid"]):
                     check = True
             if check == False:
+                print("removing", slave)
                 del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
                 MasterVariableContainer.slave_loading_requested = False
+        """
 
     def make_slaves_load(self):
         if not MasterVariableContainer.slave_loading_requested:
@@ -163,7 +195,7 @@ class Master:
                 m = MasterAssignRequest(None, slave_host, slave_port, False, 100000, dictio)
                 m.start()
                 m.join()
-                print(str(self.slaves[slave][0])+' loaded')
+                print(str(self.slaves[slave][0]) + ' loaded')
                 MasterVariableContainer.assign_request_threads.append(m)
 
             MasterVariableContainer.slave_loading_requested = True
@@ -171,9 +203,10 @@ class Master:
     def get_best_slave(self):
         # all_slaves = list(self.slaves.keys())
         # for slave in all_slaves:
-            #if MasterVariableContainer.master.slaves[slave][12] > i:
-            # MasterVariableContainer.best_slave[slave] = MasterVariableContainer.master.slaves[slave][12]
-        MasterVariableContainer.best_slave = sorted(MasterVariableContainer.master.slaves.items(), key=lambda x: x[1][12], reverse=False)
+        # if MasterVariableContainer.master.slaves[slave][12] > i:
+        # MasterVariableContainer.best_slave[slave] = MasterVariableContainer.master.slaves[slave][12]
+        MasterVariableContainer.best_slave = sorted(MasterVariableContainer.master.slaves.items(),
+                                                    key=lambda x: x[1][12], reverse=False)
         # print(MasterVariableContainer.best_slave)
 
     def send_split_dfg(self, data, child):
@@ -262,6 +295,9 @@ class Master:
 
             overall_dfg = overall_dfg + Counter(thread.content['dfg'])
 
+        for el in overall_dfg:
+            overall_dfg[el] = overall_dfg[el] / len(threads)
+
         return overall_dfg
 
     def calculate_composite_obj(self, session, process, use_transition, no_samples, attribute_key,
@@ -312,6 +348,8 @@ class Master:
         overall_obj["end_activities"] = dict(overall_obj["end_activities"])
         overall_obj["frequency_dfg"] = dict(overall_obj["frequency_dfg"])
         if performance_required:
+            for el in overall_obj["performance_dfg"]:
+                overall_obj["performance_dfg"][el] = overall_obj["performance_dfg"][el] / len(threads)
             overall_obj["performance_dfg"] = dict(overall_obj["performance_dfg"])
 
         return overall_obj
@@ -431,7 +469,7 @@ class Master:
 
         return ret
 
-    def get_variants(self, session, process, use_transition, no_samples, max_ret_items=DEFAULT_MAX_NO_RET_ITEMS):
+    def get_variants(self, session, process, use_transition, no_samples, start=0, window_size=DEFAULT_WINDOW_SIZE):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -441,7 +479,8 @@ class Master:
             slave_port = str(self.slaves[slave][2])
 
             m = VariantsRequest(session, slave_host, slave_port, use_transition, no_samples, process)
-            m.max_ret_items = max_ret_items
+            m.window_size = window_size
+            m.start_parameter = start
             m.start()
 
             threads.append(m)
@@ -461,22 +500,17 @@ class Master:
                 if not variant in dictio_variants:
                     dictio_variants[variant] = d_variants[variant]
                 else:
-                    dictio_variants[variant]["caseDuration"] = (dictio_variants[variant]["caseDuration"] *
-                                                                dictio_variants[variant]["count"] + d_variants[variant][
-                                                                    "caseDuration"] * d_variants[variant]["count"]) / (
-                                                                       dictio_variants[variant]["count"] +
-                                                                       d_variants[variant]["count"])
                     dictio_variants[variant]["count"] = dictio_variants[variant]["count"] + d_variants[variant]["count"]
 
             list_variants = sorted(list(dictio_variants.values()), key=lambda x: x["count"], reverse=True)
-            list_variants = list_variants[:min(len(list_variants), max_ret_items)]
+            list_variants = list_variants[:min(len(list_variants), window_size)]
             dictio_variants = {x["variant"]: x for x in list_variants}
 
         list_variants = sorted(list(dictio_variants.values()), key=lambda x: x["count"], reverse=True)
 
         return {"variants": list_variants, "events": events, "cases": cases}
 
-    def get_cases(self, session, process, use_transition, no_samples, max_ret_items=DEFAULT_MAX_NO_RET_ITEMS):
+    def get_cases(self, session, process, use_transition, no_samples, start=0, window_size=DEFAULT_WINDOW_SIZE):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -486,7 +520,8 @@ class Master:
             slave_port = str(self.slaves[slave][2])
 
             m = CasesListRequest(session, slave_host, slave_port, use_transition, no_samples, process)
-            m.max_ret_items = max_ret_items
+            m.window_size = window_size
+            m.start_parameter = start
             m.start()
 
             threads.append(m)
@@ -501,7 +536,7 @@ class Master:
             c_list = thread.content["cases_list"]
 
             cases_list = sorted(cases_list + c_list, key=lambda x: x["caseDuration"], reverse=True)
-            cases_list = cases_list[:min(len(cases_list), max_ret_items)]
+            cases_list = cases_list[start:min(len(cases_list), window_size)]
 
             events = events + thread.content["events"]
             cases = cases + thread.content["cases"]
@@ -561,7 +596,38 @@ class Master:
 
             return thread.content
 
-    def get_events_per_time(self, session, process, use_transition, no_samples, max_ret_items=100000):
+    def get_events_per_case(self, session, process, use_transition, no_samples, max_ret_items=100000):
+        all_slaves = list(self.slaves.keys())
+
+        threads = []
+
+        ret = {}
+
+        for slave in all_slaves:
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
+
+            m = EventsPerCaseRequest(session, slave_host, slave_port, use_transition, no_samples, process)
+            m.max_ret_items = max_ret_items
+
+            m.start()
+
+            threads.append(m)
+
+        for thread in threads:
+            thread.join()
+
+            d = thread.content["events_case"]
+
+            for k in d:
+                if not k in ret:
+                    ret[k] = 0
+                ret[k] = ret[k] + d[k]
+
+        return ret
+
+    def get_events_per_time(self, session, process, use_transition, no_samples, max_ret_items=100000,
+                            timestamp_key=xes.DEFAULT_TIMESTAMP_KEY):
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -572,6 +638,35 @@ class Master:
             slave_port = str(self.slaves[slave][2])
 
             m = EventsPerTimeRequest(session, slave_host, slave_port, use_transition, no_samples, process)
+            m.max_ret_items = max_ret_items
+            m.timestamp_key = timestamp_key
+
+            m.start()
+
+            threads.append(m)
+
+        for thread in threads:
+            thread.join()
+
+            points = points + thread.content["points"]
+
+        points = sorted(points)
+        if len(points) > max_ret_items:
+            points = points_subset.pick_chosen_points_list(max_ret_items, points)
+
+        return points
+
+    def get_events_per_time_first(self, session, process, use_transition, no_samples, max_ret_items=100000):
+        all_slaves = list(self.slaves.keys())
+
+        threads = []
+        points = []
+
+        for slave in all_slaves:
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
+
+            m = EventsPerTimeFirstRequest(session, slave_host, slave_port, use_transition, no_samples, process)
             m.max_ret_items = max_ret_items
 
             m.start()
@@ -667,6 +762,97 @@ class Master:
 
         return None
 
+    def chunks(self, l, n):
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
+    def perform_alignments(self, session, process, use_transition, no_samples, petri_string, var_list,
+                           max_align_time=sys.maxsize, max_align_time_trace=sys.maxsize,
+                           align_variant="dijkstra_no_heuristics"):
+        all_slaves = list(self.slaves.keys())
+
+        n = math.ceil(len(var_list) / len(all_slaves))
+        variants_list_split = list(self.chunks(var_list, n))
+
+        threads = []
+
+        for index, slave in enumerate(all_slaves):
+            if len(variants_list_split) > index:
+                slave_host = self.slaves[slave][1]
+                slave_port = str(self.slaves[slave][2])
+
+                content = {"petri_string": petri_string, "var_list": variants_list_split[index],
+                           "max_align_time": max_align_time, "max_align_time_trace": max_align_time_trace,
+                           "align_variant": align_variant}
+
+                m = AlignRequest(session, slave_host, slave_port, use_transition, no_samples, process, content)
+
+                m.start()
+
+                threads.append(m)
+
+        ret_dict = {}
+
+        for thread in threads:
+            thread.join()
+
+            ret_dict.update(thread.content["alignments"])
+
+        return ret_dict
+
+    def perform_tbr(self, session, process, use_transition, no_samples, petri_string, var_list,
+                    enable_parameters_precision, consider_remaining_in_fitness):
+        all_slaves = list(self.slaves.keys())
+
+        n = math.ceil(len(var_list) / len(all_slaves))
+        variants_list_split = list(self.chunks(var_list, n))
+
+        threads = []
+
+        for index, slave in enumerate(all_slaves):
+            if len(variants_list_split) > index:
+                slave_host = self.slaves[slave][1]
+                slave_port = str(self.slaves[slave][2])
+
+                content = {"petri_string": petri_string, "var_list": variants_list_split[index],
+                           "enable_parameters_precision": enable_parameters_precision,
+                           "consider_remaining_in_fitness": consider_remaining_in_fitness}
+
+                m = TbrRequest(session, slave_host, slave_port, use_transition, no_samples, process, content)
+
+                m.start()
+
+                threads.append(m)
+
+        ret_dict = []
+
+        for thread in threads:
+            thread.join()
+
+            ret_dict = ret_dict + thread.content["tbr"]
+
+        return ret_dict
+
+    def perform_shutdown(self, session, process, use_transition, no_samples):
+        all_slaves = list(self.slaves.keys())
+
+        threads = []
+
+        for slave in all_slaves:
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
+
+            m = ShutdownRequest(session, slave_host, slave_port, use_transition, no_samples, None)
+            m.start()
+
+            threads.append(m)
+
+        # do shutdown
+        os._exit(0)
+
+        for thread in threads:
+            thread.join()
+
     def get_running_processes(self):
         cpu_count = 0
         infor = [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python.exe' in p.info['name']]
@@ -704,11 +890,11 @@ class Master:
         net = psutil.net_connections()
 
     def get_temperature(self):
-        pythoncom.CoInitialize()
         # w = wmi.WMI(namespace="root\\wmi")
         # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
         # return temperature_info.CurrentTemperature
         # return (w.MSAcpi_ThermalZoneTemperature()[0].CurrentTemperature/10.0)-273.15
+        """pythoncom.CoInitialize()
         w = wmi.WMI(namespace="root\\OpenHardwareMonitor")
         temperature_infos = w.Sensor()
         temp = {}
@@ -718,7 +904,8 @@ class Master:
                 if sensor.Name == 'CPU Package':
                     temp.update({sensor.Name: sensor.Value})
                 # temp.update({sensor.Name: sensor.Value})
-        return temp
+        return temp"""
+        return 50.0
 
     def get_slaves_list2(self):
         # pid = os.getpid()
@@ -774,7 +961,8 @@ class Master:
             return None
         self.imdtime = datetime.datetime.now()
         # cut detection
-        cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None, initial_end_activities=None, activities=None)
+        cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None,
+                                       initial_end_activities=None, activities=None)
         MasterVariableContainer.found_cut = cut
         threads = []
         processlist = {process: {}}

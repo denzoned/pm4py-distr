@@ -8,7 +8,21 @@ import requests
 import json
 import time
 from pm4py.util import constants
+from pm4py.objects.petri import align_utils
+from pm4py.algo.conformance.alignments.versions import state_equation_a_star
 from datetime import datetime
+from pm4py.objects.petri.exporter.versions import pnml as pnml_exporter
+from pm4py.algo.filtering.log.variants import variants_filter as log_variants_filter
+from pm4pydistr.slave import slave
+import sys
+from pm4py.objects.petri.align_utils import get_visible_transitions_eventually_enabled_by_marking
+
+
+PARAM_MAX_ALIGN_TIME_TRACE = "max_align_time_trace"
+DEFAULT_MAX_ALIGN_TIME_TRACE = sys.maxsize
+PARAM_MAX_ALIGN_TIME = "max_align_time"
+DEFAULT_MAX_ALIGN_TIME = sys.maxsize
+
 
 class ClassicDistrLogObject(DistrLogObj):
     def __init__(self, hostname, port, keyphrase, log_name, parameters=None):
@@ -38,8 +52,8 @@ class ClassicDistrLogObject(DistrLogObj):
                     print(time.time(), "password uncorrect!")
                     break
             except:
-                print(time.time(), "connection with host failed (%d out of %d)" % (i+1, max_retry_conn))
-                if i+1 == max_retry_conn:
+                print(time.time(), "connection with host failed (%d out of %d)" % (i + 1, max_retry_conn))
+                if i + 1 == max_retry_conn:
                     break
                 sleep_time = sleep_time * 1.5
                 time.sleep(sleep_time)
@@ -50,10 +64,13 @@ class ClassicDistrLogObject(DistrLogObj):
         while True:
             r = requests.get(url)
             content = json.loads(r.text)
-            if content["slave_loading_requested"] and content["finished_slaves"] > 0 and content["finished_slaves"] == content["slaves_count"]:
+            if content["slave_loading_requested"] and content["finished_slaves"] > 0 and content["finished_slaves"] >= \
+                    content["slaves_count"]:
                 break
             else:
-                print(time.time(), "slaves still coming up, waiting a little more! finished log assignation for %d slaves out of %d" % (content["finished_slaves"], content["slaves_count"]))
+                print(time.time(),
+                      "slaves still coming up, waiting a little more! finished log assignation for %d slaves out of %d" % (
+                          content["finished_slaves"], content["slaves_count"]))
             sleep_time = sleep_time * 1.5
             time.sleep(sleep_time)
 
@@ -65,18 +82,21 @@ class ClassicDistrLogObject(DistrLogObj):
             if key not in parameters:
                 parameters[key] = self.init_parameters[key]
 
-        use_transition = parameters[PARAMETER_USE_TRANSITION] if PARAMETER_USE_TRANSITION in parameters else DEFAULT_USE_TRANSITION
+        use_transition = parameters[
+            PARAMETER_USE_TRANSITION] if PARAMETER_USE_TRANSITION in parameters else DEFAULT_USE_TRANSITION
         no_samples = parameters[PARAMETER_NO_SAMPLES] if PARAMETER_NO_SAMPLES in parameters else DEFAULT_MAX_NO_SAMPLES
 
         stru = "http://" + self.hostname + ":" + str(
             self.port) + "/" + service + "?keyphrase=" + self.keyphrase + "&process=" + self.log_name + "&session=" + str(
-            self.session) + "&use_transition="+str(use_transition) + "&no_samples=" + str(no_samples)
+            self.session) + "&use_transition=" + str(use_transition) + "&no_samples=" + str(no_samples)
 
         for parameter in parameters:
             if parameter == constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY:
                 stru = stru + "&attribute_key=" + str(parameters[constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY])
             elif parameter == "attribute_key":
                 stru = stru + "&attribute_key=" + str(parameters["attribute_key"])
+            elif parameter == "timestamp_key":
+                stru = stru + "&timestamp_key=" + str(parameters["timestamp_key"])
             elif parameter == "performance_required":
                 stru = stru + "&performance_required=" + str(parameters["performance_required"])
             elif PARAMETER_NUM_RET_ITEMS in parameters:
@@ -126,6 +146,16 @@ class ClassicDistrLogObject(DistrLogObj):
         for el in dfg:
             new_dfg[(el.split("@@")[0], el.split("@@")[1])] = dfg[el]
         return new_dfg
+
+    def calculate_im_existing_log(self, parameters=None):
+        dfg = self.calculate_dfg()
+        url = self.get_url("distributedIMD", parameters=parameters)
+        r = requests.get(url)
+        print(r.text)
+        url = self.get_url("resultIMD", parameters=parameters)
+        r = requests.get(url)
+        ret_json = json.loads(r.text)
+        return ret_json
 
     def calculate_performance_dfg(self, parameters=None):
         url = self.get_url("calculatePerformanceDfg", parameters=parameters)
@@ -209,7 +239,7 @@ class ClassicDistrLogObject(DistrLogObj):
 
     def get_events(self, case_id, parameters=None):
         url = self.get_url("getEvents", parameters=parameters)
-        url = url + "&case_id="+str(case_id)
+        url = url + "&case_id=" + str(case_id)
         r = requests.get(url)
         ret_text = r.text
         ret_json = json.loads(ret_text)
@@ -225,7 +255,8 @@ class ClassicDistrLogObject(DistrLogObj):
     def get_events_per_dotted(self, attribute1, attribute2, attribute3, parameters=None):
         if parameters is None:
             parameters = {}
-        url = self.get_url("getEventsPerDotted", parameters={"attribute1": attribute1, "attribute2": attribute2, "attribute3": attribute3})
+        url = self.get_url("getEventsPerDotted",
+                           parameters={"attribute1": attribute1, "attribute2": attribute2, "attribute3": attribute3})
         r = requests.get(url)
         ret_text = r.text
         ret_json = json.loads(ret_text)
@@ -235,7 +266,7 @@ class ClassicDistrLogObject(DistrLogObj):
     def get_events_per_time(self, parameters=None):
         if parameters is None:
             parameters = {}
-        url = self.get_url("getEventsPerTime")
+        url = self.get_url("getEventsPerTime", parameters=parameters)
         r = requests.get(url)
         ret_text = r.text
         ret_json = json.loads(ret_text)
@@ -244,6 +275,30 @@ class ClassicDistrLogObject(DistrLogObj):
         x, y = attributes_common.get_kde_date_attribute(ret)
 
         return x, y
+
+    def get_events_per_time_first(self, parameters=None):
+        if parameters is None:
+            parameters = {}
+        url = self.get_url("getEventsPerTimeFirst")
+        r = requests.get(url)
+        ret_text = r.text
+        ret_json = json.loads(ret_text)
+        ret = ret_json["points"]
+        ret = [datetime.fromtimestamp(x) for x in ret]
+        x, y = attributes_common.get_kde_date_attribute(ret)
+
+        return x, y
+
+    def get_events_per_case(self, parameters=None):
+        if parameters is None:
+            parameters = {}
+        url = self.get_url("getEventsPerCase")
+        r = requests.get(url)
+        ret_text = r.text
+        ret_json = json.loads(ret_text)
+        ret = ret_json["events_case"]
+
+        return ret
 
     def get_case_duration(self, parameters=None):
         if parameters is None:
@@ -258,7 +313,6 @@ class ClassicDistrLogObject(DistrLogObj):
 
         return x, y
 
-
     def get_numeric_attribute(self, attribute_key, parameters=None):
         if parameters is None:
             parameters = {}
@@ -271,3 +325,231 @@ class ClassicDistrLogObject(DistrLogObj):
         x, y = attributes_common.get_kde_numeric_attribute(ret)
 
         return x, y
+
+    def perform_alignments_net_log(self, net, im, fm, log, parameters=None):
+        if parameters is None:
+            parameters = {}
+        variants = log_variants_filter.get_variants_from_log_trace_idx(log, parameters=parameters)
+        var_list = [[x, y] for x, y in variants.items()]
+
+        result = self.perform_alignments_net_variants(net, im, fm, var_list=var_list, parameters=parameters)
+
+        al_idx = {}
+        for index_variant, variant in enumerate(variants):
+            for trace_idx in variants[variant]:
+                al_idx[trace_idx] = result[variant]
+
+        alignments = []
+        for i in range(len(log)):
+            alignments.append(al_idx[i])
+
+        return alignments
+
+    def perform_alignments_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        if parameters is None:
+            parameters = {}
+        if var_list is None:
+            variants = self.get_variants(parameters=parameters)
+            var_list = [[x["variant"], x["count"]] for x in variants["variants"]]
+        petri_string = pnml_exporter.export_petri_as_string(net, im, fm, parameters=parameters)
+        return self.perform_alignments(petri_string, var_list, parameters=parameters)
+
+    def perform_alignments(self, petri_string, var_list, parameters=None):
+        if parameters is None:
+            parameters = {}
+
+        max_align_time = parameters[
+            PARAM_MAX_ALIGN_TIME] if PARAM_MAX_ALIGN_TIME in parameters else DEFAULT_MAX_ALIGN_TIME
+        max_align_time_trace = parameters[
+            PARAM_MAX_ALIGN_TIME_TRACE] if PARAM_MAX_ALIGN_TIME_TRACE in parameters else DEFAULT_MAX_ALIGN_TIME_TRACE
+        align_variant = parameters["align_variant"] if "align_variant" in parameters else "dijkstra_no_heuristics"
+
+        url = self.get_url("performAlignments", parameters=parameters)
+        dictio = {"petri_string": petri_string, "var_list": var_list, "max_align_time": max_align_time,
+                  "max_align_time_trace": max_align_time_trace, "align_variant": align_variant}
+
+        r = requests.post(url, json=dictio)
+        ret_text = r.text
+        ret_json = json.loads(ret_text)
+        return ret_json["alignments"]
+
+    def perform_tbr_net_log(self, net, im, fm, log, parameters=None):
+        if parameters is None:
+            parameters = {}
+        variants = log_variants_filter.get_variants_from_log_trace_idx(log, parameters=parameters)
+        var_list = [[x, y] for x, y in variants.items()]
+
+        result = self.perform_tbr_net_variants(net, im, fm, var_list=var_list, parameters=parameters)
+
+        al_idx = {}
+        for index_variant, variant in enumerate(variants):
+            for trace_idx in variants[variant]:
+                al_idx[trace_idx] = result[index_variant]
+
+        tbr = []
+        for i in range(len(log)):
+            tbr.append(al_idx[i])
+
+        return tbr
+
+    def perform_tbr_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        if parameters is None:
+            parameters = {}
+        if var_list is None:
+            variants = self.get_variants(parameters=parameters)
+            var_list = [[x["variant"], x["count"]] for x in variants["variants"]]
+        petri_string = pnml_exporter.export_petri_as_string(net, im, fm, parameters=parameters)
+        return self.perform_token_replay(petri_string, var_list, parameters=parameters)
+
+    def perform_token_replay(self, petri_string, var_list, parameters=None):
+        if parameters is None:
+            parameters = {}
+
+        enable_parameters_precision = parameters[
+            "enable_parameters_precision"] if "enable_parameters_precision" in parameters else False
+        consider_remaining_in_fitness = parameters[
+            "consider_remaining_in_fitness"] if "consider_remaining_in_fitness" in parameters else False
+
+        url = self.get_url("performTbr")
+        dictio = {"petri_string": petri_string, "var_list": var_list,
+                  "enable_parameters_precision": enable_parameters_precision,
+                  "consider_remaining_in_fitness": consider_remaining_in_fitness}
+
+        r = requests.post(url, json=dictio)
+        ret_text = r.text
+        ret_json = json.loads(ret_text)
+        return ret_json["tbr"]
+
+    def calculate_fitness_with_tbr(self, net, im, fm, log, parameters=None):
+        if parameters is None:
+            parameters = {}
+        variants = log_variants_filter.get_variants_from_log_trace_idx(log, parameters=parameters)
+        var_list = [[x, y] for x, y in variants.items()]
+
+        parameters["enable_parameters_precision"] = False
+        parameters["consider_remaining_in_fitness"] = True
+
+        result = self.perform_tbr_net_variants(net, im, fm, var_list=var_list, parameters=parameters)
+        total_cases = 0
+        total_fit_cases = 0
+        sum_of_fitness = 0
+        total_m = 0
+        total_r = 0
+        total_c = 0
+        total_p = 0
+
+        for index_variant, variant in enumerate(variants):
+            if result[index_variant] is not None:
+                sum_of_fitness = sum_of_fitness + len(variants[variant]) * result[index_variant]["trace_fitness"]
+                total_m = total_m + len(variants[variant]) * result[index_variant]["missing_tokens"]
+                total_r = total_r + len(variants[variant]) * result[index_variant]["remaining_tokens"]
+                total_c = total_c + len(variants[variant]) * result[index_variant]["consumed_tokens"]
+                total_p = total_p + len(variants[variant]) * result[index_variant]["produced_tokens"]
+
+                total_cases = total_cases + len(variants[variant])
+                if result[index_variant]["trace_is_fit"]:
+                    total_fit_cases = total_fit_cases + len(variants[variant])
+
+        if total_cases > 0:
+            perc_fit_traces = float(100.0 * total_fit_cases) / float(total_cases)
+            average_fitness = float(sum_of_fitness) / float(total_cases)
+            log_fitness = 0.5 * (1 - total_m / total_c) + 0.5 * (1 - total_r / total_p)
+
+            return {"perc_fit_traces": perc_fit_traces, "average_trace_fitness": average_fitness,
+                    "log_fitness": log_fitness}
+
+        return {"perc_fit_traces": 0.0, "average_trace_fitness": 0.0, "log_fitness": 0.0}
+
+    def fitness_alignment_internal(self, best_worst_cost, trace, cost):
+        len_trace = len(trace.split(","))
+
+        unfitness_upper_part = cost // align_utils.STD_MODEL_LOG_MOVE_COST
+        fitness = 0
+        if unfitness_upper_part == 0:
+            fitness = 1
+        elif (len_trace + best_worst_cost) > 0:
+            fitness = 1 - (
+                    (cost // align_utils.STD_MODEL_LOG_MOVE_COST) / (
+                    len_trace + best_worst_cost))
+
+        return fitness
+
+    def calculate_fitness_with_alignments(self, net, im, fm, log, parameters=None):
+        if parameters is None:
+            parameters = {}
+
+        sum_fitness = 0
+
+        variants = log_variants_filter.get_variants_from_log_trace_idx(log, parameters=parameters)
+        var_list = [[x, y] for x, y in variants.items()]
+
+        result = self.perform_alignments_net_variants(net, im, fm, var_list=var_list, parameters=parameters)
+        total_cases = 0
+        total_fit_cases = 0
+
+        best_worst_cost = state_equation_a_star.get_best_worst_cost(net, im, fm, parameters={})
+
+        for index_variant, variant in enumerate(variants):
+            total_cases = total_cases + len(variants[variant])
+            if result[variant] is not None:
+                fitness = self.fitness_alignment_internal(best_worst_cost, variant, result[variant]["cost"])
+                sum_fitness = sum_fitness + fitness * len(variants[variant])
+
+                if result[variant]["cost"] < 10000:
+                    total_fit_cases = total_fit_cases + len(variants[variant])
+
+        if total_cases > 0:
+            perc_fit_traces = float(100.0 * total_fit_cases) / float(total_cases)
+
+            return {"averageFitness": float(sum_fitness) / float(total_cases), "percFitTraces": perc_fit_traces}
+        return {"averageFitness": 0.0, "percFitTraces": 0.0}
+
+    def calculate_precision_with_tbr(self, net, im, fm, log, parameters=None):
+        from pm4py import util as pmutil
+        from pm4py.algo.conformance.tokenreplay import factory as token_replay
+        from pm4py.objects import log as log_lib
+        from pm4py.evaluation.precision import utils as precision_utils
+
+        if parameters is None:
+            parameters = {}
+
+        sum_at = 0.0
+        sum_ee = 0.0
+
+        prefixes, prefix_count = precision_utils.get_log_prefixes(log)
+        print("got prefixes")
+        prefixes_keys = list(prefixes.keys())
+        fake_log = precision_utils.form_fake_log(prefixes_keys)
+        print("got fake log")
+
+        variants = log_variants_filter.get_variants_from_log_trace_idx(fake_log, parameters=parameters)
+        print("got variants from fake log")
+        var_list = [[x, y] for x, y in variants.items()]
+        print("got var list")
+
+        parameters["enable_parameters_precision"] = True
+        parameters["consider_remaining_in_fitness"] = False
+
+        aligned_traces = self.perform_tbr_net_variants(net, im, fm, var_list=var_list, parameters=parameters)
+        print("got aligned traces")
+
+        start_activities = set(x.split(",")[0] for x in variants)
+        trans_en_ini_marking = set(
+            [x.label for x in get_visible_transitions_eventually_enabled_by_marking(net, im)])
+        diff = trans_en_ini_marking.difference(start_activities)
+        sum_at += len(log) * len(trans_en_ini_marking)
+        sum_ee += len(log) * len(diff)
+
+        for i in range(len(aligned_traces)):
+            if aligned_traces[i]["trace_is_fit"]:
+                log_transitions = set(prefixes[prefixes_keys[i]])
+                activated_transitions_labels = set(
+                    [x for x in aligned_traces[i]["enabled_transitions_in_marking_labels"] if x != "None"])
+                sum_at += len(activated_transitions_labels) * prefix_count[prefixes_keys[i]]
+                escaping_edges = activated_transitions_labels.difference(log_transitions)
+                sum_ee += len(escaping_edges) * prefix_count[prefixes_keys[i]]
+
+        if sum_at > 0:
+            precision = 1 - float(sum_ee) / float(sum_at)
+
+        return precision

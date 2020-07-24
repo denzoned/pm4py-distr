@@ -54,8 +54,27 @@ class LocalDistrLogObj(object):
     def get_events_per_time(self, parameters=None):
         raise Exception("not implemented")
 
+    def get_events_per_time_first(self, parameters=None):
+        raise Exception("not implemented")
+
     def get_case_duration(self, parameters=None):
         raise Exception("not implemented")
 
     def get_numeric_attribute(self, attribute_key, parameters=None):
         raise Exception("not implemented")
+
+    def perform_alignments_net_log(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_alignments_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_tbr_net_log(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_tbr_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        raise Exception("not implemented")
+
+    def events_per_case(self, parameters=None):
+        raise Exception("not implemented")
+

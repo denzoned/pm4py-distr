@@ -24,6 +24,9 @@ class DistrLogObj(object):
     def calculate_dfg(self, parameters=None):
         raise Exception("not implemented")
 
+    def calculate_im_existing_log(self, parameters=None):
+        raise Exception("not implemented")
+
     def calculate_performance_dfg(self, parameters=None):
         raise Exception("not implemented")
 
@@ -66,6 +69,12 @@ class DistrLogObj(object):
     def get_events_per_time(self, parameters=None):
         raise Exception("not implemented")
 
+    def get_events_per_time_first(self, parameters=None):
+        raise Exception("not implemented")
+
+    def get_events_per_case(self, parameters=None):
+        raise Exception("not implemented")
+
     def get_case_duration(self, parameters=None):
         raise Exception("not implemented")
 
@@ -73,4 +82,25 @@ class DistrLogObj(object):
         raise Exception("not implemented")
 
     def do_caching(self, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_alignments_net_log(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_alignments_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_tbr_net_log(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def perform_tbr_net_variants(self, net, im, fm, var_list=None, parameters=None):
+        raise Exception("not implemented")
+
+    def calculate_fitness_with_alignments(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def calculate_precision_with_tbr(self, net, im, fm, log, parameters=None):
+        raise Exception("not implemented")
+
+    def calculate_fitness_with_tbr(self, net, im, fm, log, parameters=None):
         raise Exception("not implemented")

@@ -1,12 +1,10 @@
-pm4py==1.2.12
+pm4py==1.3.5
 requests
 Flask
+flask-cors
+netifaces
 psutil
-
-setuptools
-wmi
+pyarrow==0.15.1
+pm4pycvxopt==0.0.9
 pythonping
 werkzeug
-numpy
-pyarrow
-pandas
