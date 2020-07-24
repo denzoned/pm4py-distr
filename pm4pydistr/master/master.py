@@ -167,6 +167,7 @@ class Master:
                 if str(pid1) == str(pid2["pid"]):
                     check = True
             if check == False:
+                print("removing", slave)
                 del MasterVariableContainer.master.slaves[slave]
                 MasterVariableContainer.log_assignment_done = False
                 MasterVariableContainer.slave_loading_requested = False
