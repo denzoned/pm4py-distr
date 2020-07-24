@@ -147,6 +147,16 @@ class ClassicDistrLogObject(DistrLogObj):
             new_dfg[(el.split("@@")[0], el.split("@@")[1])] = dfg[el]
         return new_dfg
 
+    def calculate_im_existing_log(self, parameters=None):
+        dfg = self.calculate_dfg()
+        url = self.get_url("distributedIMD", parameters=parameters)
+        r = requests.get(url)
+        print(r.text)
+        url = self.get_url("resultIMD", parameters=parameters)
+        r = requests.get(url)
+        ret_json = json.loads(r.text)
+        return ret_json
+
     def calculate_performance_dfg(self, parameters=None):
         url = self.get_url("calculatePerformanceDfg", parameters=parameters)
         r = requests.get(url)

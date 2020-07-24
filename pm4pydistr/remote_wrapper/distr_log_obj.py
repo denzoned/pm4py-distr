@@ -24,6 +24,9 @@ class DistrLogObj(object):
     def calculate_dfg(self, parameters=None):
         raise Exception("not implemented")
 
+    def calculate_im_existing_log(self, parameters=None):
+        raise Exception("not implemented")
+
     def calculate_performance_dfg(self, parameters=None):
         raise Exception("not implemented")
 
