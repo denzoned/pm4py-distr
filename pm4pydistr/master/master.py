@@ -138,6 +138,7 @@ class Master:
             all_slaves = list([eval(x) for x in self.slaves.keys()])
             for slave in all_slaves:
                 self.sublogs_correspondence[str(slave)] = {}
+            print("BBBBBBBBBBBB", all_slaves)
 
             for folder in self.sublogs_id:
                 all_logs = list(self.sublogs_id[folder])
