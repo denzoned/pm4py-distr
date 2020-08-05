@@ -109,6 +109,7 @@ class Master:
         MasterVariableContainer.master_initialization_done = True
         self.init_dfg = {}
         self.imdtime = datetime
+        self.dfgcalctime = datetime
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -231,6 +232,7 @@ class Master:
             m.start()
 
     def calculate_dfg(self, session, process, use_transition, no_samples, attribute_key):
+        calcdfgtime = datetime.datetime.now()
         all_slaves = list(self.slaves.keys())
 
         threads = []
@@ -270,7 +272,7 @@ class Master:
             m.start()
 
             threads.append(m)
-
+        self.dfgcalctime = datetime.datetime.now() - calcdfgtime
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -1007,7 +1009,8 @@ class Master:
         if b:
             MasterVariableContainer.tree_found = True
             endtime = datetime.datetime.now()
-            self.imdtime = endtime - self.imdtime
+            self.imdtime = endtime - self.imdtime + self.dfgcalctime
+            print("Dfg computed in: " + str(self.dfgcalctime))
             print("Tree computed in: " + str(self.imdtime))
         return b
 
