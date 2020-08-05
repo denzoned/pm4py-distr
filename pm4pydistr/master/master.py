@@ -948,7 +948,7 @@ class Master:
         # apply DFG on IMD
         # apply_dfg()
 
-    def distr_imd(self, process):
+    def distr_imd(self, process, session, use_transition, no_samples, attribute_key):
         """
         This is the initial method for the inductive miner, all slaves will receive a modified version of this,
         as the first master_dfg is different
@@ -956,10 +956,12 @@ class Master:
         :param process: used Process
         :return:
         """
+        if not MasterVariableContainer.init_dfg_calc:
+            MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples, attribute_key)
         if MasterVariableContainer.init_dfg_calc and os.path.exists(os.path.join(self.conf, process)):
             clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process)
         else:
-            print("No DFG")
+            print("No DFG found")
             return None
         self.imdtime = datetime.datetime.now()
         # cut detection

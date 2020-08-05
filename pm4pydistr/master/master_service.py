@@ -874,7 +874,7 @@ def distr_IMD():
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
     if keyphrase == configuration.KEYPHRASE:
-        discoverimdfc = MasterVariableContainer.master.distr_imd(process)
+        discoverimdfc = MasterVariableContainer.master.distr_imd(process, session, use_transition, no_samples, attribute_key)
         return jsonify({"IMD": "started, for results go to /resultIMD"})
     return jsonify({"Error": {}})
 
