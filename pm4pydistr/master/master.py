@@ -1045,9 +1045,9 @@ class Master:
             slave_ram = self.slaves[slave][5]['available']
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
-            self.slaves[slave][11][0] = slave_ram
+            self.slaves[slave][11][0] = calc
 
-        return str(slave_ram)
+        return str(calc)
 
     @staticmethod
     def select_dfg(conf, process):

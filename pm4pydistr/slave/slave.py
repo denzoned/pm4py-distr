@@ -180,7 +180,7 @@ class Slave:
         return iowait
 
     def get_temperature(self, operatingsystem):
-        if operatingsystem == "2":
+        if str(operatingsystem) == "2":
             import pythoncom
             import wmi
             pythoncom.CoInitialize()
@@ -201,8 +201,10 @@ class Slave:
                 temp = 79
                 print("Start Hardwaremonitor")
                 return "start Hardwaremonitor"
-        else:
-            # TODO placeholder for Linuxversion
+        if str(operatingsystem) == "0":
+            # for Linux get the average temperature of all cores:
+            temp = psutil.sensors_temperatures()['coretemp'][0][1]
+        if str(operatingsystem) == "1":
             temp = 50
         return temp
 

@@ -934,6 +934,7 @@ def ram_fct():
             return str(k)
         else:
             resource = MasterVariableContainer.master.res_ram(configuration.DEFAULT_K)
+            print(resource)
             return "10"
     return jsonify({"Error": {}})
 
