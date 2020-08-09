@@ -109,6 +109,7 @@ def register_slave():
             MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
         except:
             del MasterVariableContainer.master.slaves[str(id)]
+            print("Error while registering Slave")
             return "Error while registering Slave"
         return jsonify({"id": str(id)})
 

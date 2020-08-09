@@ -60,7 +60,7 @@ def find_free_port():
 class Slave:
     def __init__(self, parameters):
         self.parameters = parameters
-        self.host = parameters[PARAMETERS_HOST]
+        self.host = socket.gethostbyaddr(socket.gethostname())[2][0]
         self.port = str(parameters[PARAMETERS_PORT])
         self.master_host = parameters[PARAMETERS_MASTER_HOST]
         self.master_port = str(parameters[PARAMETERS_MASTER_PORT])
