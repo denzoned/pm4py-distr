@@ -1073,7 +1073,7 @@ def resall_fct():
 
     if keyphrase == configuration.KEYPHRASE:
         if type(cpu) == float and type(ram) == float and type(disk) == float:
-            if type(k) == float:
+            if type(k) == float or type(k) == int:
                 resource = MasterVariableContainer.master.res_all(ram, cpu, disk, k)
                 return jsonify({"Resource Allocation Function": resource})
             else:

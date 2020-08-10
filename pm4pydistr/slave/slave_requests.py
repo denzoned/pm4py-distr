@@ -9,7 +9,6 @@ class SlaveRequests:
         self.slave = slave
 
         self.host = host
-        print(self.host)
         self.port = port
         self.master_host = master_host
         self.master_port = master_port
@@ -19,12 +18,10 @@ class SlaveRequests:
         self.content = None
 
     def register_to_webservice(self):
-        print("Host: " + str(self.master_host) + " port: " + str(self.master_port) + " ip: " + str(self.host) + " port: " + str(self.port) + " conf: " + str(self.conf))
+        print("Registering: Host: " + str(self.master_host) + " port: " + str(self.master_port) + " ip: " + str(self.host) + " port: " + str(self.port) + " conf: " + str(self.conf))
         r = requests.get(
             "http://" + self.master_host + ":" + self.master_port + "/registerSlave?keyphrase=" + configuration.KEYPHRASE + "&ip=" + self.host + "&port=" + self.port + "&conf=" + self.conf)
-        print(r)
         response = json.loads(r.text)
-        print(response)
         self.id = response['id']
         self.slave.id = response['id']
 

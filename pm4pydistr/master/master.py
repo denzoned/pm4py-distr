@@ -1047,12 +1047,17 @@ class Master:
     def res_ram(self, k):
         all_slaves = list(self.slaves.keys())
         for slave in all_slaves:
-            slave_ram = self.slaves[slave][5]['available']
+            if type(self.slaves[slave][5]) == dict:
+                slave_ram = self.slaves[slave][5]['available']
+            elif type(self.slaves[slave][5]) == list:
+                slave_ram = self.slaves[slave][5][1]
+            else:
+                return 1
             slave_ram = int(slave_ram) / int(configuration.MAX_RAM)
             calc = 1 / (1 + math.exp(-float(k) * ((1 - slave_ram) - 0.5)))
             self.slaves[slave][11][0] = calc
 
-        return str(calc)
+        return 1
 
     @staticmethod
     def select_dfg(conf, process):
@@ -1085,37 +1090,47 @@ class Master:
         all_slaves = list(self.slaves.keys())
 
         for slave in all_slaves:
-            load1 = self.slaves[slave][7][0]
-            load5 = self.slaves[slave][7][1]
-            temp = self.slaves[slave][9]
-            usage = self.slaves[slave][6] / 100
-            if load1 > 1.1:
-                hload = 0
-            elif load5 != 0:
-                hload = (1 - load1 / load5) * (1 - (load1 / 1.1))
-            else:
-                hload = 1
-            maxtemp = configuration.MAX_T_JUNCTION * 0.8
-            if maxtemp > temp:
-                htemp = 1
-            else:
-                htemp = 0
-            hcpu = (1 - usage) ** (1.1 - hload) * htemp
-            self.slaves[slave][11][1] = hcpu.real
-        return hcpu.real
+            if type(self.slaves[slave][7]) == list:
+                load1 = self.slaves[slave][7][0]
+                load5 = self.slaves[slave][7][1]
+                temp = self.slaves[slave][9]
+                usage = self.slaves[slave][6] / 100
+                if load1 > 1.1:
+                    hload = 0
+                elif load5 != 0:
+                    hload = (1 - load1 / load5) * (1 - (load1 / 1.1))
+                else:
+                    hload = 1
+                maxtemp = configuration.MAX_T_JUNCTION * 0.8
+                if maxtemp > temp:
+                    htemp = 1
+                else:
+                    htemp = 0
+                hcpu = (1 - usage) ** (1.1 - hload) * htemp
+                self.slaves[slave][11][1] = hcpu.real
+        return 1
 
     def res_disk(self):
         all_slaves = list(self.slaves.keys())
         maxdfg = sys.getsizeof(self.init_dfg)
         for slave in all_slaves:
-            freedisk = self.slaves[slave][8]['free']
-            iowait = self.slaves[slave][13]
-            if freedisk > maxdfg:
-                h_io = 1 - iowait
-            else:
-                h_io = 0
-            self.slaves[slave][11][2] = h_io
-        return freedisk
+            if type(self.slaves[slave][8]) == dict:
+                freedisk = self.slaves[slave][8]['free']
+                iowait = self.slaves[slave][13]
+                if freedisk > maxdfg:
+                    h_io = 1 - iowait
+                else:
+                    h_io = 0
+                self.slaves[slave][11][2] = h_io
+            if type(self.slaves[slave][8]) == list:
+                freedisk = self.slaves[slave][8][2]
+                iowait = self.slaves[slave][13]
+                if freedisk > maxdfg:
+                    h_io = 1 - iowait
+                else:
+                    h_io = 0
+                self.slaves[slave][11][2] = h_io
+        return 1
 
     def master_init(self, session, process, use_transition, no_samples, attribute_key, doall, clean):
         # Get configuration values
@@ -1123,7 +1138,12 @@ class Master:
         configuration.MAX_RAM = 0
         threads = []
         for slave in all_slaves:
-            ram = self.slaves[slave][5]['available']
+            if type(self.slaves[slave][5]) == dict:
+                ram = self.slaves[slave][5]['available']
+            elif type(self.slaves[slave][5]) == list:
+                ram = self.slaves[slave][5][1]
+            else:
+                ram = 0
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
             if ram > configuration.MAX_RAM:
