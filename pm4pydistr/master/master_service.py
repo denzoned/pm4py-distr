@@ -104,7 +104,7 @@ def register_slave():
         MasterVariableContainer.master.slaves[str(id)] = [conf, ip, port, time(), 1, 1, 1, 1, 1, 1, 1, [0, 0, 0], 1, 1]
         try:
             r2 = requests.get(
-                "http://" + MasterVariableContainer.master.host + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
+                "http://" + ip + ":" + port + "/getcurrentPIDinfo?keyphrase=" + configuration.KEYPHRASE)
             response = json.loads(r2.text)
             MasterVariableContainer.master.slaves[str(id)][4] = response['PID']
         except:
