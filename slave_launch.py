@@ -12,5 +12,5 @@ class ExecutionThread(Thread):
     def run(self):
         os.system(self.command)
 
-t1 = ExecutionThread(PYTHON_PATH+" launch.py --type slave --conf slave4 --port 5005 --master-host 127.0.0.1 --master-port 5001")
+t1 = ExecutionThread(PYTHON_PATH+" launch.py --type slave --conf slave4 --port 5005 --master-host 136.226.117.17 --master-port 5001")
 t1.start()
