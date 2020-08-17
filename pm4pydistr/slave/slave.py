@@ -310,20 +310,21 @@ class Slave:
             print("Offloading: " + str(fullfilepath))
             file_stats = os.stat(fullfilepath)
             # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
-            if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
-                print("Filesize below threshold or best slave is itself")
-                with open(fullfilepath) as f:
-                    data = json.load(f)
-                json_content = data
-                folder = "parent_dfg"
-                filename = str(json_content["name"]) + ".json"
-                if folder not in os.listdir(SlaveVariableContainer.conf):
-                    SlaveVariableContainer.slave.create_folder(folder)
-                SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
-                # print(json_content)
-                SlaveVariableContainer.received_dfgs.update({filename: "notree"})
-                parent_file = json_content["parent_file"]
-                SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
+            if len(bestslave) < (i+add):
+                if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
+                    print("Filesize below threshold or best slave is itself")
+                    with open(fullfilepath) as f:
+                        data = json.load(f)
+                    json_content = data
+                    folder = "parent_dfg"
+                    filename = str(json_content["name"]) + ".json"
+                    if folder not in os.listdir(SlaveVariableContainer.conf):
+                        SlaveVariableContainer.slave.create_folder(folder)
+                    SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+                    # print(json_content)
+                    SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+                    parent_file = json_content["parent_file"]
+                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
             else:
                 # reserve slave then send dfg to best free slave
                 send = False

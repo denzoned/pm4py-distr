@@ -246,9 +246,9 @@ class Master:
         threads = []
         self.dfgcalctime = 0
         tree = ProcessTree(operator=Operator.XOR)
-        n_childs_0 = 5
-        n_childs_1 = 5
-        n_childs_2 = 5
+        n_childs_0 = 2
+        n_childs_1 = 2
+        n_childs_2 = 2
         for i in range(n_childs_0):
             c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
             # to node 1 (parallel)
@@ -1143,7 +1143,6 @@ class Master:
                 with open(os.path.join(conf, process, filename), "r") as read_file:
                     dfg = json.load(read_file)
                     dfg = dfg['dfg']
-                    print(dfg)
                     newdfg = Counter()
                     dfglist = []
                     for s in dfg:
@@ -1152,7 +1151,6 @@ class Master:
                         temp = [dfgtuple, 1]
                         dfglist.append(temp)
                         newdfg[dfgtuple] = 1
-                    print(dfglist)
         else:
             if os.path.exists(os.path.join(conf, process, filename)):
                 with open(os.path.join(conf, process, filename), "r") as read_file:
@@ -1174,7 +1172,6 @@ class Master:
                     for key, value in newdfg.items():
                         temp = [key, value]
                         dfglist.append(temp)
-                print(dfglist)
         return dfglist
 
     def res_cpu(self):
