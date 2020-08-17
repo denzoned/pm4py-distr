@@ -77,6 +77,16 @@ from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
 from pm4pydistr.discovery.imd import cut_detection
 from pm4pydistr.master.rqsts.send_master_dfg import MasterDfgRequest
 
+from pm4py.objects.process_tree.process_tree import ProcessTree
+from pm4py.objects.process_tree.pt_operator import Operator
+from pm4py.visualization.process_tree import visualizer
+from pm4py.algo.discovery.footprints import algorithm as fp_discovery
+from pm4py.algo.discovery.inductive import algorithm as inductive_miner
+from pm4py.visualization.dfg import visualizer as dfg_vis
+import uuid
+import time
+import pickle
+
 
 class Master:
     def __init__(self, parameters):
@@ -230,6 +240,65 @@ class Master:
             m = FilterRequest(session, slave_host, slave_port, use_transition, no_samples,
                               {"process": process, "data": data})
             m.start()
+
+    def create_dfg(self, process):
+        all_slaves = list(self.slaves.keys())
+        threads = []
+        self.dfgcalctime = 0
+        tree = ProcessTree(operator=Operator.XOR)
+        n_childs_0 = 5
+        n_childs_1 = 5
+        n_childs_2 = 5
+        for i in range(n_childs_0):
+            c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
+            # to node 1 (parallel)
+            for j in range(n_childs_1):
+                c2 = ProcessTree(parent=c1, operator=Operator.SEQUENCE)
+                # to node c2
+                for z in range(n_childs_2):
+                    c3 = ProcessTree(parent=c2, label=str(uuid.uuid4()))
+                    c2.children.append(c3)
+                c1.children.append(c2)
+            tree.children.append(c1)
+        # print(tree)
+        # gviz = visualizer.apply(tree, parameters={"format": "PNG"})
+        # visualizer.view(gviz)
+        fps = fp_discovery.apply(tree)
+        dfg = set(fps["sequence"]).union(set(fps["parallel"]))
+        print(dfg)
+        dfg = {x: 1 for x in dfg}
+        dfg2 = {}
+        for key in dfg.keys():
+            if type(key) is not str:
+                dfg2[str(key)] = dfg[key]
+            else:
+                dfg2[key] = dfg[key]
+
+        # saves the DFG
+        self.init_dfg.update({"dfg": dict(dfg2)})
+        if not os.path.isdir(os.path.join(self.conf, process)):
+            os.mkdir(os.path.join(self.conf, process))
+        with open(os.path.join(self.conf, process, "masterdfg.json"), "w") as write_file:
+            json.dump(self.init_dfg, write_file, indent=4)
+        MasterVariableContainer.init_dfg_calc = True
+
+        dfgfile = os.path.join(self.conf, process, "masterdfg.json")
+        for slave in all_slaves:
+            slave_host = self.slaves[slave][1]
+            slave_port = str(self.slaves[slave][2])
+            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile)
+            m.start()
+            threads.append(m)
+
+        pickle.dump(dfg, open(str(process) + ".dump", "wb"))
+        if True:
+            # loads the DFG again
+            dfg = pickle.load(open(str(process) + ".dump", "rb"))
+            aa = time.time()
+            tree2 = inductive_miner.apply_tree_dfg(dfg)
+            # print(tree2)
+            bb = time.time()
+            print(bb - aa)
 
     def calculate_dfg(self, session, process, use_transition, no_samples, attribute_key):
         calcdfgtime = datetime.datetime.now()
@@ -938,7 +1007,7 @@ class Master:
         dfg = self.init_dfg
         start = self.get_start_activities(session, process, use_transition, no_samples)
         end = self.get_end_activities(session, process, use_transition, no_samples)
-        clean_dfg = MasterVariableContainer.master.select_dfg(self.conf, process)
+        clean_dfg = MasterVariableContainer.master.select_dfg(self.conf, process, 0)
         with open(os.path.join("dfg.txt"), "w") as write_file:
             json.dump(clean_dfg, write_file)
         c = Counts()
@@ -948,7 +1017,7 @@ class Master:
         # apply DFG on IMD
         # apply_dfg()
 
-    def distr_imd(self, process, session, use_transition, no_samples, attribute_key):
+    def distr_imd(self, process, session, use_transition, no_samples, attribute_key, created):
         """
         This is the initial method for the inductive miner, all slaves will receive a modified version of this,
         as the first master_dfg is different
@@ -957,13 +1026,18 @@ class Master:
         :return:
         """
         if not MasterVariableContainer.init_dfg_calc:
-            MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples, attribute_key)
+            if created == "1":
+                MasterVariableContainer.master.create_dfg(process)
+            else:
+                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples, attribute_key)
+
         if MasterVariableContainer.init_dfg_calc and os.path.exists(os.path.join(self.conf, process)):
-            clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process)
+            clean_dfg = MasterVariableContainer.master.select_dfg(MasterVariableContainer.master.conf, process, created)
         else:
             print("No DFG found")
             return None
         self.imdtime = datetime.datetime.now()
+        print(clean_dfg)
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None,
                                        initial_end_activities=None, activities=None)
@@ -1060,30 +1134,47 @@ class Master:
         return 1
 
     @staticmethod
-    def select_dfg(conf, process):
+    def select_dfg(conf, process, created):
         newdfg = Counter()
         filename = "masterdfg.json"
-        if os.path.exists(os.path.join(conf, process, filename)):
-            with open(os.path.join(conf, process, filename), "r") as read_file:
-                dfg = json.load(read_file)
-                dfg = dfg['dfg']
-                for s in dfg:
-                    newkey = s.split('@@')
-                    # x = re.search("T[0-9]", newkey[0])
-                    # if x:
-                    #    newkey[0] = newkey[0].split(' ', 1)[1]
-                    # x1 = re.search("T[0-9]", newkey[1])
-                    # if x1:
-                    #    newkey[1] = newkey[1].split(' ', 1)[1]
-                    dfgtuple = (str(newkey[0]), str(newkey[1]))
-                    newdfg.update(dfgtuple)
-                    newdfg[dfgtuple] = dfg[s]
-                newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
-                dfglist = []
-                for key, value in newdfg.items():
-                    temp = [key, value]
-                    dfglist.append(temp)
-            # print(dfglist)
+        print(created)
+        if str(created) == "1":
+            if os.path.exists(os.path.join(conf, process, filename)):
+                with open(os.path.join(conf, process, filename), "r") as read_file:
+                    dfg = json.load(read_file)
+                    dfg = dfg['dfg']
+                    print(dfg)
+                    newdfg = Counter()
+                    dfglist = []
+                    for s in dfg:
+                        newkey = s.split("'")
+                        dfgtuple = (newkey[1], newkey[3])
+                        temp = [dfgtuple, 1]
+                        dfglist.append(temp)
+                        newdfg[dfgtuple] = 1
+                    print(dfglist)
+        else:
+            if os.path.exists(os.path.join(conf, process, filename)):
+                with open(os.path.join(conf, process, filename), "r") as read_file:
+                    dfg = json.load(read_file)
+                    dfg = dfg['dfg']
+                    for s in dfg:
+                        newkey = s.split('@@')
+                        # x = re.search("T[0-9]", newkey[0])
+                        # if x:
+                        #    newkey[0] = newkey[0].split(' ', 1)[1]
+                        # x1 = re.search("T[0-9]", newkey[1])
+                        # if x1:
+                        #    newkey[1] = newkey[1].split(' ', 1)[1]
+                        dfgtuple = (str(newkey[0]), str(newkey[1]))
+                        newdfg.update(dfgtuple)
+                        newdfg[dfgtuple] = dfg[s]
+                    newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+                    dfglist = []
+                    for key, value in newdfg.items():
+                        temp = [key, value]
+                        dfglist.append(temp)
+                print(dfglist)
         return dfglist
 
     def res_cpu(self):

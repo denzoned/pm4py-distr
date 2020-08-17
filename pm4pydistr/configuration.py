@@ -1,4 +1,5 @@
 import os
+import socket
 
 ENVIRON_PREFIX = "pm4pydistr"
 PARAMETERS_AUTO_HOST = "autohost"
@@ -24,7 +25,7 @@ BASE_FOLDER_LIST_OPTIONS = ["master"]
 #BASE_FOLDER_LIST_OPTIONS = ["master", "/opt/pm4pydistr-share"]
 
 DEFAULT_TYPE = "slave"
-THIS_HOST = "127.0.0.1"
+THIS_HOST = socket.gethostbyaddr(socket.gethostname())[2][0]
 PORT = 5001
 MASTER_HOST = '137.226.117.71'
 MASTER_PORT = 5001

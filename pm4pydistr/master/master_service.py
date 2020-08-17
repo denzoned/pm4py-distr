@@ -871,11 +871,12 @@ def distr_IMD():
     process = request.args.get('process', type=str)
     session = request.args.get('session', type=str)
     attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    created = request.args.get('created', type=str)
 
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
     if keyphrase == configuration.KEYPHRASE:
-        discoverimdfc = MasterVariableContainer.master.distr_imd(process, session, use_transition, no_samples, attribute_key)
+        discoverimdfc = MasterVariableContainer.master.distr_imd(process, session, use_transition, no_samples, attribute_key, created)
         return jsonify({"IMD": "started, for results go to /resultIMD"})
     return jsonify({"Error": {}})
 
@@ -1125,4 +1126,14 @@ def get_bestslave():
     if keyphrase == configuration.KEYPHRASE:
         MasterVariableContainer.master.get_best_slave()
         return jsonify({"Slaves": MasterVariableContainer.best_slave})
+    return jsonify({"Error": {}})
+
+@MasterSocketListener.app.route("/createDFG", methods=["GET"])
+def createDFG():
+    keyphrase = request.args.get('keyphrase', type=str)
+    dfgname = request.args.get('dfgname', type=str)
+
+    if keyphrase == configuration.KEYPHRASE:
+        MasterVariableContainer.master.create_dfg(dfgname)
+        return jsonify({"DFG creation": "done"})
     return jsonify({"Error": {}})
