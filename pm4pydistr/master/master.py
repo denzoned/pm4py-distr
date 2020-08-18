@@ -2,6 +2,8 @@ import datetime
 import json
 import math
 import os
+import shutil
+import threading
 import time
 from collections import Counter
 from pathlib import Path
@@ -248,7 +250,7 @@ class Master:
         tree = ProcessTree(operator=Operator.XOR)
         n_childs_0 = 2
         n_childs_1 = 2
-        n_childs_2 = 2
+        n_childs_2 = 1
         for i in range(n_childs_0):
             c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
             # to node 1 (parallel)
@@ -456,7 +458,6 @@ class Master:
         for slave in all_slaves:
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
-
             m = SaRequest(session, slave_host, slave_port, use_transition, no_samples, process)
             m.start()
 
@@ -466,7 +467,7 @@ class Master:
         for thread in threads:
             thread.join()
             overall_sa = overall_sa + Counter(thread.content['start_activities'])
-
+        print("Start activities: " + str(overall_sa))
         return overall_sa
 
     def get_attribute_values(self, session, process, use_transition, no_samples, attribute_key):
@@ -1013,6 +1014,7 @@ class Master:
         c = Counts()
         s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
         tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        print(tree_repr)
         return tree_repr
         # apply DFG on IMD
         # apply_dfg()
@@ -1048,10 +1050,11 @@ class Master:
             MasterVariableContainer.send_dfgs.update(processlist)
         for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
             MasterVariableContainer.master.get_best_slave()
-            slave = MasterVariableContainer.best_slave[index]
+            slaveindex = index % len(MasterVariableContainer.best_slave)
+            slave = MasterVariableContainer.best_slave[slaveindex]
             print(str(slave))
-            best_host = MasterVariableContainer.best_slave[index][1][1]
-            best_port = MasterVariableContainer.best_slave[index][1][2]
+            best_host = MasterVariableContainer.best_slave[slaveindex][1][1]
+            best_port = MasterVariableContainer.best_slave[slaveindex][1][2]
             # print(MasterVariableContainer.best_slave)
             fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
             # print(fullfilepath)
@@ -1094,6 +1097,7 @@ class Master:
         if MasterVariableContainer.tree_found:
             tree = {MasterVariableContainer.found_cut: {}, "Time to compute": str(self.imdtime)}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
+                print(filename)
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
                     tree[MasterVariableContainer.found_cut].update(subtree)
@@ -1237,6 +1241,10 @@ class Master:
             if ram > configuration.MAX_RAM:
                 configuration.MAX_RAM = ram
             if clean == 1:
+                # if os.path.isdir(os.path.join(self.conf)):
+                #     thread = threading.Thread(target=shutil.rmtree(self.conf))
+                #     thread.start()
+                #     thread.join()
                 m = RemFileRequest(None, slave_host, slave_port, False, 100000,
                                    MasterVariableContainer.master.init_dfg)
                 MasterVariableContainer.log_assignment_done = False
@@ -1260,7 +1268,7 @@ class Master:
                 f = f / (ram + cpu + disk)
                 self.slaves[slave][12] = f
             # If slave in slave reservation is set on 2 reset here to 0
-            for s in MasterVariableContainer.reserved_slaves:
-                if MasterVariableContainer.reserved_slaves[s] == 2:
-                    MasterVariableContainer.reserved_slaves[s] = 0
+            # for s in MasterVariableContainer.reserved_slaves:
+            #     if MasterVariableContainer.reserved_slaves[s] == 2:
+            #         MasterVariableContainer.reserved_slaves[s] = 0
         return None

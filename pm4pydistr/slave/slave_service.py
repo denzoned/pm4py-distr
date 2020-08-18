@@ -96,7 +96,7 @@ def send_dfg():
         # print(json_content)
         SlaveVariableContainer.received_dfgs.update({filename: "notree"})
         parent_file = json_content["parent_file"]
-        SlaveVariableContainer.slave.slave_distr(filename, parent_file, send_host, send_port)
+        SlaveVariableContainer.slave.slave_distr(filename, parent_file, send_host, send_port, False)
         # print(jsonify(tree))
         # return jsonify({'tree': tree})
     return jsonify({})

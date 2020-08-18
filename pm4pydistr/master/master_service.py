@@ -147,6 +147,11 @@ def ping_from_slave():
         except requests.exceptions.RequestException as e:
             # del MasterVariableContainer.master.slaves[id]
             pass
+        print(MasterVariableContainer.reserved_slaves)
+        if conf in MasterVariableContainer.reserved_slaves:
+            if MasterVariableContainer.reserved_slaves[conf] == 2:
+                MasterVariableContainer.reserved_slaves[conf] = 0
+                print("Slave unlocked and set to " + str(MasterVariableContainer.reserved_slaves[conf]) + " for " + str(conf))
 
     return jsonify({"id": id})
 
@@ -856,7 +861,14 @@ def simple_IMD():
 
     use_transition = request.args.get(PARAMETER_USE_TRANSITION, type=str, default=str(DEFAULT_USE_TRANSITION))
     no_samples = request.args.get(PARAMETER_NO_SAMPLES, type=int, default=DEFAULT_MAX_NO_SAMPLES)
-
+    print(session)
+    print(type(session))
+    print(use_transition)
+    print(type(use_transition))
+    print(attribute_key)
+    print(type(attribute_key))
+    print(no_samples)
+    print(type(no_samples))
     if keyphrase == configuration.KEYPHRASE:
         discoverimdfc = MasterVariableContainer.master.simple_imd(session, process, use_transition, no_samples,
                                                                   attribute_key)

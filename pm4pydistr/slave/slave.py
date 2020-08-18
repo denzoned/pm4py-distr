@@ -3,9 +3,19 @@ import json
 import subprocess
 from collections import Counter
 
+from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
+from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
+
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
     PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST, PARAMETERS_AUTO_PORT, SIZE_THRESHOLD
 from pm4pydistr.discovery.imd import cut_detection
+from pm4pydistr.discovery.imd.detection_utils import infer_start_activities, infer_end_activities
+from pm4pydistr.log_handlers.parquet import get_start_activities
+from pm4pydistr.master.treecalc import SubtreeDFGBased
+from pm4pydistr.configuration import PARAMETER_NO_SAMPLES, DEFAULT_MAX_NO_SAMPLES
+from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS
+from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
+
 
 from pm4pydistr.slave.slave_service import SlaveSocketListener
 from pm4pydistr.slave.slave_requests import SlaveRequests
@@ -26,6 +36,8 @@ import os
 from sys import platform as _platform
 import shutil
 import psutil
+
+from pm4pydistr.log_handlers import parquet as parquet_handler
 
 
 def decode_json_dfg(dfg):
@@ -239,7 +251,7 @@ class Slave:
                     "temp": self.temp, "os": self.os, "iowait": self.iowait}
         return jsonfile
 
-    def slave_distr(self, filename, parentfile, sendhost, sendport):
+    def slave_distr(self, filename, parentfile, sendhost, sendport, local):
         folder = "parent_dfg"
         print(self.conf + " cutting: " + filename)
         if os.path.exists(os.path.join(self.conf, folder, "masterdfg.json")):
@@ -252,30 +264,56 @@ class Slave:
                     initial_start_activities = data["initial_start"]
                     initial_end_activities = data["initial_end"]
                     process = data["process"]
-                    cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"],
-                                                   initial_start_activities, initial_end_activities, data['activities'])
-                    SlaveVariableContainer.found_cuts.update(
-                        {filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
-                    tree = {}
-                    if cut == "seq":
-                        self.send_child_dfgs(process, cut, filename)
-                    if cut == "par":
-                        self.send_child_dfgs(process, cut, filename)
-                    if cut == "loop":
-                        self.send_child_dfgs(process, cut, filename)
-                    if cut == "seq2":
-                        self.send_child_dfgs(process, cut, filename)
-                    if cut == "flower":
-                        tree = {"flower": data["activities"]}
+                    if local:
+                        session = None
+                        parameters = {}
+                        use_transition = str(PARAMETER_USE_TRANSITION)
+                        no_samples = DEFAULT_MAX_NO_SAMPLES
+                        parameters[PARAMETER_NO_SAMPLES] = no_samples
+                        print(no_samples)
+                        # start = Counter()
+                        start = infer_start_activities(clean_dfg)
+                        print("Start: " + str(start))
+                        end = infer_end_activities(clean_dfg)
+                        # end = Counter()
+                        print("End: " + str(end))
+                        # end = parquet_handler.get_end_activities(session, process, use_transition, no_samples)
+                        c = Counts()
+                        s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+                        tree = get_tree_repr_dfg_based.get_repr(s, 0, False)
+                        tree = {"tree": str(tree)}
+                        print(str(filename) + " has the tree: " + str(tree))
+                        SlaveVariableContainer.found_cuts.update(
+                            {filename: {"cut": "tree", "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         SlaveVariableContainer.received_dfgs[filename] = tree
                         parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                         self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
-                    if cut == "base_xor":
-                        tree = {"base": data["activities"]}
-                        SlaveVariableContainer.received_dfgs[filename] = tree
-                        parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
-                        self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
-                    return tree
+                        return tree
+                    else:
+                        cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"],
+                                                       initial_start_activities, initial_end_activities, data['activities'])
+                        SlaveVariableContainer.found_cuts.update(
+                            {filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
+                        tree = {}
+                        if cut == "seq":
+                            self.send_child_dfgs(process, cut, filename)
+                        if cut == "par":
+                            self.send_child_dfgs(process, cut, filename)
+                        if cut == "loop":
+                            self.send_child_dfgs(process, cut, filename)
+                        if cut == "seq2":
+                            self.send_child_dfgs(process, cut, filename)
+                        if cut == "flower":
+                            tree = {"flower": data["activities"]}
+                            SlaveVariableContainer.received_dfgs[filename] = tree
+                            parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
+                            self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                        if cut == "base_xor":
+                            tree = {"base": data["activities"]}
+                            SlaveVariableContainer.received_dfgs[filename] = tree
+                            parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
+                            self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                        return tree
         return None
 
     def send_child_dfgs(self, process, cut, parent):
@@ -284,6 +322,7 @@ class Slave:
         tree = {cut: {}}
 
         processlist = {process: {}}
+        sendingtime = time.time()
         if not self.checkKey(SlaveVariableContainer.send_dfgs, process):
             SlaveVariableContainer.send_dfgs.update(processlist)
         if not self.checkKey(SlaveVariableContainer.send_dfgs[process], parent):
@@ -309,8 +348,9 @@ class Slave:
             fullfilepath = s[0]
             print("Offloading: " + str(fullfilepath))
             file_stats = os.stat(fullfilepath)
+            print("Slave list length: " + str(len(bestslave)))
             # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
-            if len(bestslave) < (i+add):
+            if len(bestslave) > (i+add):
                 if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
                     print("Filesize below threshold or best slave is itself")
                     with open(fullfilepath) as f:
@@ -324,7 +364,9 @@ class Slave:
                     # print(json_content)
                     SlaveVariableContainer.received_dfgs.update({filename: "notree"})
                     parent_file = json_content["parent_file"]
-                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
+                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port, True)
+                    # s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+                    # tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False
             else:
                 # reserve slave then send dfg to best free slave
                 send = False
@@ -367,10 +409,13 @@ class Slave:
                         # print(json_content)
                         SlaveVariableContainer.received_dfgs.update({filename: "notree"})
                         parent_file = json_content["parent_file"]
-                        SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port)
+                        SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port, True)
             send_file = {filename: "send"}
             SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
             print(SlaveVariableContainer.send_dfgs[process][parent])
+        sendingtimeb = time.time()
+        timetosend = sendingtimeb - sendingtime
+        print(timetosend)
 
     def ping_slaves(self, slave_list):
         i = 0
