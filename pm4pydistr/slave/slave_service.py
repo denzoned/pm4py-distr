@@ -82,6 +82,7 @@ def send_dfg():
     keyphrase = request.args.get('keyphrase', type=str)
     send_host = request.args.get('host', type=str)
     send_port = request.args.get('port', type=str)
+    created = request.args.get('created', type=bool)
     if keyphrase == configuration.KEYPHRASE:
         # try:
         #    json_content = json.loads(request.data)
@@ -97,6 +98,7 @@ def send_dfg():
         SlaveVariableContainer.received_dfgs.update({filename: "notree"})
         parent_file = json_content["parent_file"]
         SlaveVariableContainer.slave.slave_distr(filename, parent_file, send_host, send_port, False)
+        SlaveVariableContainer.created = created
         # print(jsonify(tree))
         # return jsonify({'tree': tree})
     return jsonify({})
@@ -119,7 +121,10 @@ def return_tree():
 @SlaveSocketListener.app.route("/sendMasterDFG", methods=["POST", "GET"])
 def master_dfg():
     keyphrase = request.args.get('keyphrase', type=str)
+    created = request.args.get('created', type=str)
     if keyphrase == configuration.KEYPHRASE:
+        if created == "1":
+            SlaveVariableContainer.slave.created = True
         json_content = request.json
         folder = "parent_dfg"
         filename = "masterdfg.json"

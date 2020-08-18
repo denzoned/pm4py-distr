@@ -536,27 +536,42 @@ class Slave:
     def clean_init_dfg(conf, process):
         newdfg = Counter()
         filename = "masterdfg.json"
-        if os.path.exists(os.path.join(conf, process, filename)):
-            with open(os.path.join(conf, process, filename), "r") as read_file:
-                dfg = json.load(read_file)
-                dfg = dfg['dfg']
-                for s in dfg:
-                    newkey = s.split('@@')
-                    # x = re.search("T[0-9]", newkey[0])
-                    # if x:
-                    #    newkey[0] = newkey[0].split(' ', 1)[1]
-                    # x1 = re.search("T[0-9]", newkey[1])
-                    # if x1:
-                    #    newkey[1] = newkey[1].split(' ', 1)[1]
-                    dfgtuple = (str(newkey[0]), str(newkey[1]))
-                    newdfg.update(dfgtuple)
-                    newdfg[dfgtuple] = dfg[s]
-                newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
-                dfglist = []
-                for key, value in newdfg.items():
-                    temp = [key, value]
-                    dfglist.append(temp)
-            # print(dfglist)
+        created = SlaveVariableContainer.slave.created
+        if created:
+            if os.path.exists(os.path.join(conf, process, filename)):
+                with open(os.path.join(conf, process, filename), "r") as read_file:
+                    dfg = json.load(read_file)
+                    dfg = dfg['dfg']
+                    newdfg = Counter()
+                    dfglist = []
+                    for s in dfg:
+                        newkey = s.split("'")
+                        dfgtuple = (newkey[1], newkey[3])
+                        temp = [dfgtuple, 1]
+                        dfglist.append(temp)
+                        newdfg[dfgtuple] = 1
+        else:
+            if os.path.exists(os.path.join(conf, process, filename)):
+                with open(os.path.join(conf, process, filename), "r") as read_file:
+                    dfg = json.load(read_file)
+                    dfg = dfg['dfg']
+                    for s in dfg:
+                        newkey = s.split('@@')
+                        # x = re.search("T[0-9]", newkey[0])
+                        # if x:
+                        #    newkey[0] = newkey[0].split(' ', 1)[1]
+                        # x1 = re.search("T[0-9]", newkey[1])
+                        # if x1:
+                        #    newkey[1] = newkey[1].split(' ', 1)[1]
+                        dfgtuple = (str(newkey[0]), str(newkey[1]))
+                        newdfg.update(dfgtuple)
+                        newdfg[dfgtuple] = dfg[s]
+                    newdfg = {x: count for x, count in newdfg.items() if type(x) is tuple}
+                    dfglist = []
+                    for key, value in newdfg.items():
+                        temp = [key, value]
+                        dfglist.append(temp)
+                # print(dfglist)
         return dfglist
 
 

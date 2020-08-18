@@ -283,12 +283,12 @@ class Master:
         with open(os.path.join(self.conf, process, "masterdfg.json"), "w") as write_file:
             json.dump(self.init_dfg, write_file, indent=4)
         MasterVariableContainer.init_dfg_calc = True
-
+        print("Sending created dfg to slaves")
         dfgfile = os.path.join(self.conf, process, "masterdfg.json")
         for slave in all_slaves:
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
-            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile)
+            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile, 1)
             m.start()
             threads.append(m)
 
@@ -339,7 +339,7 @@ class Master:
             slave_host = self.slaves[slave][1]
             slave_port = str(self.slaves[slave][2])
 
-            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile)
+            m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile, 0)
             m.start()
 
             threads.append(m)
