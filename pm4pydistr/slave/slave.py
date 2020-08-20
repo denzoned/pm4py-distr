@@ -291,20 +291,14 @@ class Slave:
                         self.save_subtree("returned_trees", filename, tree, process, parentfile)
                         return tree
                     else:
-                        print(str(self.conf) + " has to send " + str(filename))
                         cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"],
                                                        initial_start_activities, initial_end_activities, data['activities'])
                         SlaveVariableContainer.found_cuts.update(
                             {filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         tree = {}
                         print("Found cut for " + str(filename) + " is " + str(cut))
-                        if cut == "seq":
-                            self.send_child_dfgs(process, cut, filename)
-                        if cut == "par":
-                            self.send_child_dfgs(process, cut, filename)
-                        if cut == "loop":
-                            self.send_child_dfgs(process, cut, filename)
-                        if cut == "seq2":
+                        if cut == "seq" or cut == "par" or cut == "loop" or cut == "seq2":
+                            print(str(self.conf) + " has to send " + str(filename))
                             self.send_child_dfgs(process, cut, filename)
                         if cut == "flower":
                             tree = {"flower": data["activities"]}
