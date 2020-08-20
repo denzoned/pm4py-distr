@@ -248,9 +248,9 @@ class Master:
         threads = []
         self.dfgcalctime = datetime.datetime.now() - datetime.datetime.now()
         tree = ProcessTree(operator=Operator.XOR)
-        n_childs_0 = 2
-        n_childs_1 = 2
-        n_childs_2 = 1
+        n_childs_0 = 3
+        n_childs_1 = 5
+        n_childs_2 = 3
         for i in range(n_childs_0):
             c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
             # to node 1 (parallel)

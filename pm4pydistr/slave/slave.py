@@ -511,7 +511,7 @@ class Slave:
         b = True
         if self.checkKey(d, process):
             if self.checkKey(d[process], parent):
-                for s in d[process][parent]:
+                for s in list(d[process][parent]):
                     if d[process][parent][s] == "send":
                         b = False
                         print(str(s) + " not received yet")
@@ -528,17 +528,20 @@ class Slave:
         if SlaveVariableContainer.received_dfgs[parentfile] == "found":
             tree = {SlaveVariableContainer.found_cuts[parentfile]["cut"]: {}}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
-                with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
-                    subtree = json.load(read_file)
+                # with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
+                #     subtree = json.load(read_file)
                     # print(subtree)
-                    print("Tree before: " + str(tree))
-                    # print(SlaveVariableContainer.found_cuts[parentfile])
-                    # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
-                    print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
-                    dictkey = re.findall(r'\d+', filename)[-1]
-                    print(dictkey)
-                    tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
-                    print("Tree after: " + str(tree))
+                subtree = []
+                for line in open(os.path.join(self.conf, "returned_trees", filename), 'r'):
+                    subtree.append(json.loads(line))
+                print("Tree before: " + str(tree))
+                # print(SlaveVariableContainer.found_cuts[parentfile])
+                # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
+                print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
+                dictkey = re.findall(r'\d+', filename)[-1]
+                print(dictkey)
+                tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
+                print("Tree after: " + str(tree))
             return tree
         return "No tree"
 

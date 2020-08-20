@@ -147,7 +147,7 @@ def ping_from_slave():
         except requests.exceptions.RequestException as e:
             # del MasterVariableContainer.master.slaves[id]
             pass
-        print(MasterVariableContainer.reserved_slaves)
+        # print(MasterVariableContainer.reserved_slaves)
         if conf in MasterVariableContainer.reserved_slaves:
             if MasterVariableContainer.reserved_slaves[conf] == 2:
                 MasterVariableContainer.reserved_slaves[conf] = 0
