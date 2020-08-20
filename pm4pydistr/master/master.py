@@ -298,7 +298,7 @@ class Master:
             dfg = pickle.load(open(str(process) + ".dump", "rb"))
             aa = time.time()
             tree2 = inductive_miner.apply_tree_dfg(dfg)
-            # print(tree2)
+            print("The tree should be: " + str(tree2))
             bb = time.time()
             print(bb - aa)
 

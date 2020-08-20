@@ -16,6 +16,7 @@ from pm4pydistr.configuration import PARAMETER_NO_SAMPLES, DEFAULT_MAX_NO_SAMPLE
 from pm4pydistr.configuration import PARAMETER_NUM_RET_ITEMS
 from pm4pydistr.configuration import PARAMETER_USE_TRANSITION, DEFAULT_USE_TRANSITION
 
+from pm4py.algo.discovery.inductive import algorithm as inductive_miner
 
 from pm4pydistr.slave.slave_service import SlaveSocketListener
 from pm4pydistr.slave.slave_requests import SlaveRequests
@@ -272,20 +273,22 @@ class Slave:
                         parameters[PARAMETER_NO_SAMPLES] = no_samples
                         print(no_samples)
                         # start = Counter()
-                        start = infer_start_activities(clean_dfg)
-                        print("Start: " + str(start))
-                        end = infer_end_activities(clean_dfg)
+                        # start = infer_start_activities(clean_dfg)
+                        # print("Start: " + str(start))
+                        # end = infer_end_activities(clean_dfg)
                         # end = Counter()
-                        print("End: " + str(end))
+                        # print("End: " + str(end))
                         # end = parquet_handler.get_end_activities(session, process, use_transition, no_samples)
-                        c = Counts()
-                        s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, initial_start_activities, initial_end_activities)
-                        tree = get_tree_repr_dfg_based.get_repr(s, 0, False)
-                        tree = {"tree": str(tree)}
-                        print(str(filename) + " has the tree: " + str(tree))
+                        # c = Counts()
+                        # s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, initial_start_activities, initial_end_activities)
+                        # tree = get_tree_repr_dfg_based.get_repr(s, 0, False)
+                        # tree = {"tree": str(tree)}
+                        # print(str(filename) + " has the tree: " + str(tree))
+                        tree = inductive_miner.apply_tree_dfg(clean_dfg)
                         SlaveVariableContainer.found_cuts.update({filename: {"cut": "tree", "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         SlaveVariableContainer.received_dfgs[filename] = tree
-                        self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                        # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                        self.save_subtree("returned_trees", filename, tree, process, parentfile)
                         return tree
                     else:
                         print(str(self.conf) + " has to send " + str(filename))
@@ -307,12 +310,14 @@ class Slave:
                             tree = {"flower": data["activities"]}
                             SlaveVariableContainer.received_dfgs[filename] = tree
                             # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
-                            self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                            # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                            self.save_subtree("returned_trees", filename, tree, process, parentfile)
                         if cut == "base_xor":
                             tree = {"base": data["activities"]}
                             SlaveVariableContainer.received_dfgs[filename] = tree
                             # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
-                            self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                            # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
+                            self.save_subtree("returned_trees", filename, tree, process, parentfile)
                         return tree
         return None
 
