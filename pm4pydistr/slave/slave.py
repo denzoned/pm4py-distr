@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 import subprocess
 from collections import Counter
 
@@ -529,10 +530,15 @@ class Slave:
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
-                    print(subtree)
-                    print(tree)
-                    print(SlaveVariableContainer.found_cuts[parentfile])
-                    tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
+                    # print(subtree)
+                    print("Tree before: " + str(tree))
+                    # print(SlaveVariableContainer.found_cuts[parentfile])
+                    # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
+                    print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
+                    dictkey = re.findall(r'\d+', filename)[-1]
+                    print(dictkey)
+                    tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
+                    print("Tree after: " + str(tree))
             return tree
         return "No tree"
 

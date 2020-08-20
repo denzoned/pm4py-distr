@@ -994,9 +994,12 @@ def initialize():
         if doall is 1:
             print('DFG calculating')
             if MasterVariableContainer.log_assignment_done is True and MasterVariableContainer.slave_loading_requested is True:
-                MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
+                if not MasterVariableContainer.created:
+                    MasterVariableContainer.master.calculate_dfg(session, process, use_transition, no_samples,
                                                              attribute_key)
-                print('DFG calculated')
+                    print('DFG calculated')
+                else:
+                    print('DFG already created')
         return jsonify({"Initialization": 'done'})
     return jsonify({"Wrong Keyphrase": {}})
 

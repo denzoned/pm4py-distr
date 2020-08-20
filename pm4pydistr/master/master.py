@@ -278,6 +278,8 @@ class Master:
 
         # saves the DFG
         self.init_dfg.update({"dfg": dict(dfg2)})
+        if os.path.isdir(os.path.join(self.conf, process)):
+            shutil.rmtree(os.path.join(self.conf, process))
         if not os.path.isdir(os.path.join(self.conf, process)):
             os.mkdir(os.path.join(self.conf, process))
         with open(os.path.join(self.conf, process, "masterdfg.json"), "w") as write_file:
@@ -291,6 +293,11 @@ class Master:
             m = MasterDfgRequest(None, slave_host, slave_port, False, 100000, dfgfile, 1)
             m.start()
             threads.append(m)
+        MasterVariableContainer.log_assignment_done = True
+        MasterVariableContainer.slave_loading_requested = True
+        MasterVariableContainer.created = True
+        MasterVariableContainer.send_dfgs = {}
+        MasterVariableContainer.reserved_slaves = {}
 
         pickle.dump(dfg, open(str(process) + ".dump", "wb"))
         if True:
@@ -1101,11 +1108,14 @@ class Master:
     def result_tree(self, process):
         if MasterVariableContainer.tree_found:
             tree = {MasterVariableContainer.found_cut: {}, "Time to compute": str(self.imdtime)}
+            subtreemerged = []
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
                 print(filename)
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
-                    tree[MasterVariableContainer.found_cut].update(subtree)
+                    print("Subtree for master is " + str(subtree))
+                    dictkey = re.findall(r'\d+', filename)[-1]
+                    tree[MasterVariableContainer.found_cut].update({dictkey: subtree})
             print("Master found tree " + str(tree))
             return tree
         return "No tree"
@@ -1235,6 +1245,8 @@ class Master:
         all_slaves = list(self.slaves.keys())
         configuration.MAX_RAM = 0
         threads = []
+        MasterVariableContainer.send_dfgs = {}
+        MasterVariableContainer.reserved_slaves = {}
         for slave in all_slaves:
             if type(self.slaves[slave][5]) == dict:
                 ram = self.slaves[slave][5]['available']
@@ -1251,6 +1263,16 @@ class Master:
                 #     thread = threading.Thread(target=shutil.rmtree(self.conf))
                 #     thread.start()
                 #     thread.join()
+                if os.path.isdir(os.path.join(self.conf)):
+                    if os.path.isdir(os.path.join(self.conf, "child_dfg")):
+                        shutil.rmtree(os.path.join(self.conf, "child_dfg"))
+                    if os.path.isdir(os.path.join(self.conf, "parent_dfg")):
+                        shutil.rmtree(os.path.join(self.conf, "parent_dfg"))
+                    if os.path.isdir(os.path.join(self.conf, "returned_dfg")):
+                        shutil.rmtree(os.path.join(self.conf, "returned_dfg"))
+                    if os.path.isdir(os.path.join(self.conf, "returned_trees")):
+                        shutil.rmtree(os.path.join(self.conf, "returned_trees"))
+
                 m = RemFileRequest(None, slave_host, slave_port, False, 100000,
                                    MasterVariableContainer.master.init_dfg)
                 MasterVariableContainer.log_assignment_done = False

@@ -74,6 +74,9 @@ def synchronize_files():
             for log_name in json_content["logs"][log_folder]:
                 SlaveVariableContainer.slave.load_log(log_folder, log_name)
                 SlaveVariableContainer.managed_logs[log_folder].append(log_name)
+        SlaveVariableContainer.received_dfgs = {}
+        SlaveVariableContainer.send_dfgs = {}
+        SlaveVariableContainer.found_cuts = {}
     return jsonify({})
 
 
