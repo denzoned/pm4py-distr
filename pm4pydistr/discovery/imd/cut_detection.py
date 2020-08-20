@@ -166,7 +166,9 @@ def save_cut(dfg, activities, parent_name, cut_name, position, conf, process, in
         os.mkdir(os.path.join(conf, folder_name))
     if not os.path.isdir(os.path.join(conf, folder_name, process)):
         os.mkdir(os.path.join(conf, folder_name, process))
-    with open(os.path.join(conf, folder_name, process, file_name + ".json"), "w") as write_file:
+    if not os.path.isdir(os.path.join(conf, folder_name, process, parent_name)):
+        os.mkdir(os.path.join(conf, folder_name, process, parent_name))
+    with open(os.path.join(conf, folder_name, process, parent_name, file_name + ".json"), "w") as write_file:
         json.dump(json_dfg, write_file, indent=4)
         print(file_name)
         write_file.close()

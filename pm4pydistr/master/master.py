@@ -246,7 +246,7 @@ class Master:
     def create_dfg(self, process):
         all_slaves = list(self.slaves.keys())
         threads = []
-        self.dfgcalctime = 0
+        self.dfgcalctime = datetime.datetime.now() - datetime.datetime.now()
         tree = ProcessTree(operator=Operator.XOR)
         n_childs_0 = 2
         n_childs_1 = 2
@@ -1039,7 +1039,7 @@ class Master:
             print("No DFG found")
             return None
         self.imdtime = datetime.datetime.now()
-        print(clean_dfg)
+        # print(clean_dfg)
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None,
                                        initial_end_activities=None, activities=None)
@@ -1048,7 +1048,7 @@ class Master:
         processlist = {process: {}}
         if not MasterVariableContainer.master.checkKey(MasterVariableContainer.send_dfgs, process):
             MasterVariableContainer.send_dfgs.update(processlist)
-        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
+        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process, "m"))):
             MasterVariableContainer.master.get_best_slave()
             slaveindex = index % len(MasterVariableContainer.best_slave)
             slave = MasterVariableContainer.best_slave[slaveindex]
@@ -1056,7 +1056,7 @@ class Master:
             best_host = MasterVariableContainer.best_slave[slaveindex][1][1]
             best_port = MasterVariableContainer.best_slave[slaveindex][1][2]
             # print(MasterVariableContainer.best_slave)
-            fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
+            fullfilepath = os.path.join(self.conf, "child_dfg", process, "m", filename)
             # print(fullfilepath)
             m = CompDfgRequest(None, best_host, best_port, False, 100000, fullfilepath)
             threads.append(m)
@@ -1079,8 +1079,10 @@ class Master:
             return False
 
     def check_tree(self, process):
+        print("Checking tree")
         d = MasterVariableContainer.send_dfgs
         b = True
+        print(d)
         if MasterVariableContainer.master.checkKey(d, process):
             for s in d[process]:
                 if d[process][s] == "send":
@@ -1088,9 +1090,12 @@ class Master:
         if b:
             MasterVariableContainer.tree_found = True
             endtime = datetime.datetime.now()
-            self.imdtime = endtime - self.imdtime + self.dfgcalctime
+            timer = endtime - self.imdtime
+            timer = timer + self.dfgcalctime
+            self.imdtime = timer
             print("Dfg computed in: " + str(self.dfgcalctime))
             print("Tree computed in: " + str(self.imdtime))
+        print(b)
         return b
 
     def result_tree(self, process):
@@ -1101,13 +1106,14 @@ class Master:
                 with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
                     subtree = json.load(read_file)
                     tree[MasterVariableContainer.found_cut].update(subtree)
+            print("Master found tree " + str(tree))
             return tree
         return "No tree"
 
     def save_subtree(self, folder_name, subtree_name, subtree, process):
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
-        print("Trying to save" + subtree_name)
+        print("Master received subtree " + subtree_name)
         # if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
         with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
             json.dump(subtree, write_file)

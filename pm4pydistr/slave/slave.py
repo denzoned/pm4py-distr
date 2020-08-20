@@ -279,22 +279,22 @@ class Slave:
                         print("End: " + str(end))
                         # end = parquet_handler.get_end_activities(session, process, use_transition, no_samples)
                         c = Counts()
-                        s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
+                        s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, initial_start_activities, initial_end_activities)
                         tree = get_tree_repr_dfg_based.get_repr(s, 0, False)
                         tree = {"tree": str(tree)}
                         print(str(filename) + " has the tree: " + str(tree))
-                        SlaveVariableContainer.found_cuts.update(
-                            {filename: {"cut": "tree", "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
+                        SlaveVariableContainer.found_cuts.update({filename: {"cut": "tree", "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         SlaveVariableContainer.received_dfgs[filename] = tree
-                        parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                         self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                         return tree
                     else:
+                        print(str(self.conf) + " has to send " + str(filename))
                         cut = cut_detection.detect_cut(init_dfg, clean_dfg, data["name"], self.conf, data["process"],
                                                        initial_start_activities, initial_end_activities, data['activities'])
                         SlaveVariableContainer.found_cuts.update(
                             {filename: {"cut": cut, "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         tree = {}
+                        print("Found cut for " + str(filename) + " is " + str(cut))
                         if cut == "seq":
                             self.send_child_dfgs(process, cut, filename)
                         if cut == "par":
@@ -306,12 +306,12 @@ class Slave:
                         if cut == "flower":
                             tree = {"flower": data["activities"]}
                             SlaveVariableContainer.received_dfgs[filename] = tree
-                            parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
+                            # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                             self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                         if cut == "base_xor":
                             tree = {"base": data["activities"]}
                             SlaveVariableContainer.received_dfgs[filename] = tree
-                            parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
+                            # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                             self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                         return tree
         return None
@@ -320,7 +320,7 @@ class Slave:
         threads = []
         childs = []
         tree = {cut: {}}
-
+        parentfolder = str(parent).split(".")[0]
         processlist = {process: {}}
         sendingtime = time.time()
         if not self.checkKey(SlaveVariableContainer.send_dfgs, process):
@@ -329,11 +329,11 @@ class Slave:
             SlaveVariableContainer.send_dfgs[process].update({parent: {}})
         print("Send dfgs: " + str(SlaveVariableContainer.send_dfgs))
         filesizelist = {}
-        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process))):
+        for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process, parentfolder))):
             # Best Slave Request
             # TODO sort files based on size first
             if not self.checkKey(SlaveVariableContainer.send_dfgs[process][parent], filename):
-                fullfilepath = os.path.join(self.conf, "child_dfg", process, filename)
+                fullfilepath = os.path.join(self.conf, "child_dfg", process, parentfolder, filename)
                 file_stats = os.stat(fullfilepath)
                 filesizelist[fullfilepath] = file_stats.st_size / 1024
         sortedfilesizelist = sorted(filesizelist.items(), key=lambda x: x[1], reverse=True)
@@ -346,73 +346,57 @@ class Slave:
         add = 0
         for i, s in enumerate(sortedfilesizelist):
             fullfilepath = s[0]
-            print("Offloading: " + str(fullfilepath))
+            filename = str(s[0]).split("/")[4]
+            print("Checking: " + str(fullfilepath) + " so file: " + str(filename))
             file_stats = os.stat(fullfilepath)
             print("Slave list length: " + str(len(bestslave)))
             # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
+            send = False
             if len(bestslave) > (i+add):
                 if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
                     print("Filesize below threshold or best slave is itself")
-                    with open(fullfilepath) as f:
-                        data = json.load(f)
-                    json_content = data
-                    folder = "parent_dfg"
-                    filename = str(json_content["name"]) + ".json"
-                    if folder not in os.listdir(SlaveVariableContainer.conf):
-                        SlaveVariableContainer.slave.create_folder(folder)
-                    SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
-                    # print(json_content)
-                    SlaveVariableContainer.received_dfgs.update({filename: "notree"})
-                    parent_file = json_content["parent_file"]
-                    SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port, True)
-                    # s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
-                    # tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False
-            else:
-                # reserve slave then send dfg to best free slave
-                send = False
-                while (i + add) < len(slavelist) and not send:
-                    print("Add is " + str(add) + " and i " + str(i) + " and send: " + str(send))
-                    toreserve = ReserveSlave(str(slavelist[i + add][1][0]), self.master_host, self.master_port, 0)
-                    print("Reserveattempt:" + str(slavelist[i + add][1][0]) + " by " + self.conf + " for file " + str(
-                        fullfilepath))
-                    toreserve.start()
-                    toreserve.join()
-                    reserveattempt = toreserve.conf
-                    print("Return of reservation: " + str(reserveattempt))
-                    if reserveattempt == 0:
-                        besthost = slavelist[i + add][1][1]
-                        bestport = slavelist[i + add][1][2]
-                        print("Sending to " + str(slavelist[i + add][1][0]) + " from " + str(self.conf))
-                        m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
-                        head, tail = os.path.split(fullfilepath)
-                        filename = tail
-                        m.start()
-                        # notify master that DFG send
-                        n = ReserveSlave(str(slavelist[i][1][0]), self.master_host, self.master_port, 1)
-                        n.start()
-                        send = True
-                    elif reserveattempt == 1:
-                        add = add + 1
-                    elif reserveattempt == 2:
-                        add = add + 1
-                    # In case all slaves are reserved, or more files than slaves, compute by itself
-                    if not send:
-                        print("computing by itself")
-                        with open(fullfilepath) as f:
-                            data = json.load(f)
-                        json_content = data
-                        folder = "parent_dfg"
-                        filename = str(json_content["name"]) + ".json"
-                        if folder not in os.listdir(SlaveVariableContainer.conf):
-                            SlaveVariableContainer.slave.create_folder(folder)
-                        SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
-                        # print(json_content)
-                        SlaveVariableContainer.received_dfgs.update({filename: "notree"})
-                        parent_file = json_content["parent_file"]
-                        SlaveVariableContainer.slave.slave_distr(filename, parent_file, self.host, self.port, True)
+                    SlaveVariableContainer.slave.slave_distr(filename, parentfolder, self.host, self.port, True)
+                else:
+                    # self is not best slave and file size over threshold
+                    while (i + add) < len(slavelist) and not send:
+                        print("Add is " + str(add) + " and i " + str(i) + " and send: " + str(send))
+                        toreserve = ReserveSlave(str(slavelist[i + add][1][0]), self.master_host, self.master_port, 0)
+                        print("Reserveattempt:" + str(slavelist[i + add][1][0]) + " by " + self.conf + " for file " + str(
+                            fullfilepath))
+                        toreserve.start()
+                        toreserve.join()
+                        reserveattempt = toreserve.conf
+                        print("Return of reservation: " + str(reserveattempt))
+                        if reserveattempt == 0:
+                            besthost = slavelist[i + add][1][1]
+                            bestport = slavelist[i + add][1][2]
+                            print("Sending to " + str(slavelist[i + add][1][0]) + " from " + str(self.conf))
+                            m = CalcDfg(self, self.conf, besthost, bestport, fullfilepath)
+                            head, tail = os.path.split(fullfilepath)
+                            filename = tail
+                            m.start()
+                            # notify master that DFG send
+                            n = ReserveSlave(str(slavelist[i][1][0]), self.master_host, self.master_port, 1)
+                            n.start()
+                            send = True
+                        else:
+                            add = add + 1
+            # In case all slaves are reserved, or more files than slaves, compute by itself
+            if not send:
+                print("No other slaves left, computing by itself")
+                if parentfolder not in os.listdir(SlaveVariableContainer.conf):
+                    SlaveVariableContainer.slave.create_folder(parentfolder)
+                # SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
+                # print(json_content)
+                # SlaveVariableContainer.received_dfgs.update({filename: "notree"})
+                # parent_file = json_content["parent_file"]
+                SlaveVariableContainer.slave.slave_distr(filename, parent, self.host, self.port, True)
             send_file = {filename: "send"}
+            # parent_file = str(parentfolder) + ".json"
+            if not self.checkKey(SlaveVariableContainer.send_dfgs[process], parent):
+                SlaveVariableContainer.send_dfgs[process].update({parent: {}})
             SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
-            print(SlaveVariableContainer.send_dfgs[process][parent])
+            print("send dfgs: " + str(SlaveVariableContainer.send_dfgs[process]))
         sendingtimeb = time.time()
         timetosend = sendingtimeb - sendingtime
         print(timetosend)
@@ -463,23 +447,25 @@ class Slave:
         print("Received tree " + str(subtree_name) + " for: " + str(parent))
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
-        parentfile = parent + ".json"
-        if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
-            with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
-                json.dump(subtree, write_file)
-                d = SlaveVariableContainer.send_dfgs
-
-                if not self.checkKey(d, process):
-                    print("Slaveerror: Process " + process + " not found")
-                    return None
-                if not self.checkKey(d[process], parentfile):
-                    print("Slaveerror: Parent " + parentfile + " not found")
-                    return None
-                else:
-                    print(self.conf + " saves received subtree " + subtree_name + " for " + parentfile)
-                    SlaveVariableContainer.send_dfgs[process][parentfile][subtree_name] = "received"
-        print("Send dfgs:  " + str(SlaveVariableContainer.send_dfgs[process][parentfile]))
+        parentfile = str(parent).split(".")[0] + ".json"
+        # if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
+        #     print("Path does not exists yet")
+        with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
+            json.dump(subtree, write_file)
+            d = SlaveVariableContainer.send_dfgs
+            print(d)
+            if not self.checkKey(d, process):
+                print("Slaveerror: Process " + process + " not found")
+                return None
+            elif not self.checkKey(d[process], parentfile):
+                print("Slaveerror: Parent " + parentfile + " not found")
+                return None
+            else:
+                print(self.conf + " saves received subtree " + subtree_name + " for " + parentfile)
+                SlaveVariableContainer.send_dfgs[process][parentfile][subtree_name] = "received"
+        print("Received dfgs: " + str(SlaveVariableContainer.send_dfgs[process][parentfile]))
         if self.check_tree(process, parentfile):
+            print("After check all subtrees found for " + str(parentfile))
             tree = self.result_tree(process, parent)
             host = SlaveVariableContainer.found_cuts[parentfile]["sendhost"]
             port = SlaveVariableContainer.found_cuts[parentfile]["sendport"]
@@ -507,22 +493,24 @@ class Slave:
 
     def check_tree(self, process, parent):
         d = SlaveVariableContainer.send_dfgs
+        print(d)
         b = True
         if self.checkKey(d, process):
             if self.checkKey(d[process], parent):
                 for s in d[process][parent]:
                     if d[process][parent][s] == "send":
                         b = False
-        if SlaveVariableContainer.received_dfgs[parent] == "found":
-            print("No tree found yet for " + parent)
-            b = False
+                        print(str(s) + " not received yet")
+        # if SlaveVariableContainer.received_dfgs[parent] == "found":
+        #     print("No tree found yet for " + parent)
+        #     b = False
         if b:
             print("All subtrees found for " + parent)
             SlaveVariableContainer.received_dfgs[parent] = "found"
         return b
 
     def result_tree(self, process, parent):
-        parentfile = parent + ".json"
+        parentfile = str(parent).split(".")[0] + ".json"
         if SlaveVariableContainer.received_dfgs[parentfile] == "found":
             tree = {SlaveVariableContainer.found_cuts[parentfile]["cut"]: {}}
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
@@ -546,6 +534,7 @@ class Slave:
                     dfglist = []
                     for s in dfg:
                         newkey = s.split("'")
+                        # print(s)
                         dfgtuple = (newkey[1], newkey[3])
                         temp = [dfgtuple, 1]
                         dfglist.append(temp)
