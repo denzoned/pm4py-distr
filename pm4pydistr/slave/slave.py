@@ -361,6 +361,7 @@ class Slave:
                 if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
                     print("Filesize below threshold or best slave is itself")
                     SlaveVariableContainer.slave.slave_distr(filename, parentfolder, self.host, self.port, True)
+                    send = True
                 else:
                     # self is not best slave and file size over threshold
                     while (i + add) < len(slavelist) and not send:
