@@ -98,7 +98,6 @@ class Slave:
 
         self.filters = {}
         self.dfg = {}
-        SlaveVariableContainer.slave.created = False
 
         if not os.path.exists(self.conf):
             os.mkdir(self.conf)

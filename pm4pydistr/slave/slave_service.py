@@ -39,6 +39,7 @@ class SlaveSocketListener(Thread):
 
     def __init__(self, slave, host, port, master_host, master_port, conf):
         SlaveVariableContainer.slave = slave
+        SlaveVariableContainer.slave.created = False
         SlaveVariableContainer.host = host
         SlaveVariableContainer.port = port
         SlaveVariableContainer.master_host = master_host
