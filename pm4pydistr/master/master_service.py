@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import socket
 import threading
 
 import requests
@@ -51,7 +52,7 @@ class MasterSocketListener(Thread):
         Thread.__init__(self)
 
     def run(self):
-        self.app.run(host="0.0.0.0", port=MasterVariableContainer.port, threaded=True)
+        self.app.run(host=socket.gethostbyaddr(socket.gethostname())[2][0], port=MasterVariableContainer.port, threaded=True)
 
 
 def check_master_initialized():

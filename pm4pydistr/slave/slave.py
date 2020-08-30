@@ -98,6 +98,7 @@ class Slave:
 
         self.filters = {}
         self.dfg = {}
+        SlaveVariableContainer.slave.created = False
 
         if not os.path.exists(self.conf):
             os.mkdir(self.conf)
@@ -514,7 +515,7 @@ class Slave:
                 for s in list(d[process][parent]):
                     if d[process][parent][s] == "send":
                         b = False
-                        print(str(s) + " not received yet")
+                        print(str(s) + " not received yet on " + str(self.conf) + ". Send to ")
         # if SlaveVariableContainer.received_dfgs[parent] == "found":
         #     print("No tree found yet for " + parent)
         #     b = False

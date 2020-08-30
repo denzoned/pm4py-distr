@@ -1,4 +1,5 @@
 import shutil
+import socket
 import threading
 from threading import Thread
 from pm4pydistr import configuration
@@ -47,7 +48,7 @@ class SlaveSocketListener(Thread):
         Thread.__init__(self)
 
     def run(self):
-        self.app.run(host="0.0.0.0", port=SlaveVariableContainer.port, threaded=True)
+        self.app.run(host=socket.gethostbyaddr(socket.gethostname())[2][0], port=SlaveVariableContainer.port, threaded=True)
 
 
 @SlaveSocketListener.app.route("/checkVersions", methods=["GET"])

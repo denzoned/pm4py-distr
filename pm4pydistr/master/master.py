@@ -248,9 +248,9 @@ class Master:
         threads = []
         self.dfgcalctime = datetime.datetime.now() - datetime.datetime.now()
         tree = ProcessTree(operator=Operator.XOR)
-        n_childs_0 = 3
-        n_childs_1 = 5
-        n_childs_2 = 3
+        n_childs_0 = 5
+        n_childs_1 = 10
+        n_childs_2 = 5
         for i in range(n_childs_0):
             c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
             # to node 1 (parallel)
@@ -312,7 +312,7 @@ class Master:
     def calculate_dfg(self, session, process, use_transition, no_samples, attribute_key):
         calcdfgtime = datetime.datetime.now()
         all_slaves = list(self.slaves.keys())
-
+        print("Master calculate_dfg")
         threads = []
 
         for slave in all_slaves:
@@ -334,6 +334,8 @@ class Master:
 
         self.init_dfg.update({"dfg": dict(overall_dfg)})
 
+        dfgcalctime1 = datetime.datetime.now() - calcdfgtime
+        # print("DFG calculated in " + str(dfgcalctime1))
         folder_name = str(process)
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
@@ -351,6 +353,7 @@ class Master:
 
             threads.append(m)
         self.dfgcalctime = datetime.datetime.now() - calcdfgtime
+        print("DFG calculated in " + str(self.dfgcalctime))
         return overall_dfg
 
     def calculate_performance_dfg(self, session, process, use_transition, no_samples, attribute_key):
@@ -1096,12 +1099,6 @@ class Master:
                     b = False
         if b:
             MasterVariableContainer.tree_found = True
-            endtime = datetime.datetime.now()
-            timer = endtime - self.imdtime
-            timer = timer + self.dfgcalctime
-            self.imdtime = timer
-            print("Dfg computed in: " + str(self.dfgcalctime))
-            print("Tree computed in: " + str(self.imdtime))
         print(b)
         return b
 
@@ -1136,6 +1133,12 @@ class Master:
                 MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
         if self.check_tree(process):
             self.result_tree(process)
+            endtime = datetime.datetime.now()
+            timer = endtime - self.imdtime
+            timer = timer + self.dfgcalctime
+            self.imdtime = timer
+            print("Dfg computed in: " + str(self.dfgcalctime))
+            print("Tree computed in: " + str(self.imdtime))
         return None
 
     def res_ram(self, k):
