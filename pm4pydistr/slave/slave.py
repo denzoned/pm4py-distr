@@ -532,16 +532,19 @@ class Slave:
                 #     subtree = json.load(read_file)
                     # print(subtree)
                 subtree = []
-                for line in open(os.path.join(self.conf, "returned_trees", filename), 'r'):
-                    subtree.append(json.loads(line))
-                print("Tree before: " + str(tree))
+                try:
+                    for line in open(os.path.join(self.conf, "returned_trees", filename), 'r'):
+                        subtree.append(json.loads(line))
+                except ValueError:
+                    print("JSON ParseError for file " + str(filename) + " at " + str(self.conf))
+                # print("Tree before: " + str(tree))
                 # print(SlaveVariableContainer.found_cuts[parentfile])
                 # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
-                print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
+                # print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
                 dictkey = re.findall(r'\d+', filename)[-1]
-                print(dictkey)
+                # print(dictkey)
                 tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
-                print("Tree after: " + str(tree))
+                # print("Tree after: " + str(tree))
             return tree
         return "No tree"
 
