@@ -569,6 +569,7 @@ class Slave:
         return b
 
     def result_tree(self, process, parent):
+        parent = str(parent).split(".")[0]
         parentfile = str(parent).split(".")[0] + ".json"
         if SlaveVariableContainer.received_dfgs[parentfile] == "found":
             tree = {SlaveVariableContainer.found_cuts[parentfile]["cut"]: {}}
