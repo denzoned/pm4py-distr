@@ -134,7 +134,6 @@ def master_dfg():
         json_content = request.json
         folder = "parent_dfg"
         filename = "masterdfg.json"
-        SlaveVariableContainer.managed_dfgs[folder] = []
         if folder not in os.listdir(SlaveVariableContainer.conf):
             SlaveVariableContainer.slave.create_folder(folder)
         SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)

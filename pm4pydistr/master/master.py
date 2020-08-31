@@ -74,7 +74,7 @@ from pm4pydistr.master.rqsts.comp_dfg_request import CompDfgRequest
 from pm4pydistr.master.treecalc import SubtreeDFGBased
 from pm4pydistr.master.treecalcone import SubtreeDFGBasedOne
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
-from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
+# from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
 from pm4pydistr.master.rqsts.rem_files_request import RemFileRequest
 from pm4pydistr.discovery.imd import cut_detection
 from pm4pydistr.master.rqsts.send_master_dfg import MasterDfgRequest
@@ -121,7 +121,9 @@ class Master:
         MasterVariableContainer.master_initialization_done = True
         self.init_dfg = {}
         self.imdtime = datetime
+        self.imdstarttime = datetime
         self.dfgcalctime = datetime
+        self.temp = 0
 
     def load_logs(self):
         all_logs = MasterVariableContainer.dbmanager.get_logs_from_db()
@@ -248,9 +250,9 @@ class Master:
         threads = []
         self.dfgcalctime = datetime.datetime.now() - datetime.datetime.now()
         tree = ProcessTree(operator=Operator.XOR)
-        n_childs_0 = 5
-        n_childs_1 = 10
-        n_childs_2 = 5
+        n_childs_0 = 2
+        n_childs_1 = 4
+        n_childs_2 = 2
         for i in range(n_childs_0):
             c1 = ProcessTree(parent=tree, operator=Operator.PARALLEL)
             # to node 1 (parallel)
@@ -334,7 +336,7 @@ class Master:
 
         self.init_dfg.update({"dfg": dict(overall_dfg)})
 
-        dfgcalctime1 = datetime.datetime.now() - calcdfgtime
+        # dfgcalctime1 = datetime.datetime.now() - calcdfgtime
         # print("DFG calculated in " + str(dfgcalctime1))
         folder_name = str(process)
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
@@ -1023,7 +1025,8 @@ class Master:
             json.dump(clean_dfg, write_file)
         c = Counts()
         s = SubtreeDFGBased(clean_dfg, clean_dfg, clean_dfg, None, c, 0, 0, start, end)
-        tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        # tree_repr = get_tree_repr_dfg_based.get_repr(s, 0, False)
+        tree_repr = inductive_miner.apply_tree_dfg(clean_dfg)
         print(tree_repr)
         return tree_repr
         # apply DFG on IMD
@@ -1048,7 +1051,8 @@ class Master:
         else:
             print("No DFG found")
             return None
-        self.imdtime = datetime.datetime.now()
+        self.imdstarttime = datetime.datetime.now()
+        self.temp = 0
         # print(clean_dfg)
         # cut detection
         cut = cut_detection.detect_cut(clean_dfg, clean_dfg, "m", self.conf, process, initial_start_activities=None,
@@ -1108,19 +1112,23 @@ class Master:
             subtreemerged = []
             for index, filename in enumerate(os.listdir(os.path.join(self.conf, "returned_trees"))):
                 print(filename)
-                with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
-                    subtree = json.load(read_file)
-                    print("Subtree for master is " + str(subtree))
-                    dictkey = re.findall(r'\d+', filename)[-1]
-                    tree[MasterVariableContainer.found_cut].update({dictkey: subtree})
-            print("Master found tree " + str(tree))
+                try:
+                    with open(os.path.join(self.conf, "returned_trees", filename), "r") as read_file:
+                        subtree = json.load(read_file)
+                        # print("Subtree for master is " + str(subtree))
+                        dictkey = re.findall(r'\d+', filename)[-1]
+                        tree[MasterVariableContainer.found_cut].update({dictkey: subtree})
+                except ValueError:
+                    print("JSON ParseError for file " + str(filename) + " at Master")
+            print("Master found tree ")
             return tree
         return "No tree"
 
     def save_subtree(self, folder_name, subtree_name, subtree, process):
+        print("Master received " + str(subtree_name) + ": " + str(subtree))
         if not os.path.isdir(os.path.join(self.conf, folder_name)):
             os.mkdir(os.path.join(self.conf, folder_name))
-        print("Master received subtree " + subtree_name)
+        # print("Master received subtree " + subtree_name)
         # if not os.path.exists(os.path.join(self.conf, folder_name, subtree_name)):
         with open(os.path.join(self.conf, folder_name, subtree_name), "w") as write_file:
             json.dump(subtree, write_file)
@@ -1132,12 +1140,14 @@ class Master:
                 print("Master saved " + subtree_name + " for process " + process)
                 MasterVariableContainer.send_dfgs[process][subtree_name] = "received"
         if self.check_tree(process):
-            self.result_tree(process)
             endtime = datetime.datetime.now()
-            timer = endtime - self.imdtime
-            timer = timer + self.dfgcalctime
+            timer = endtime - self.imdstarttime
+            # timer = timer + self.dfgcalctime
             self.imdtime = timer
-            print("Dfg computed in: " + str(self.dfgcalctime))
+            self.temp = self.temp + 1
+            print("Result tree found " + str(self.temp) + " times")
+            self.result_tree(process)
+            # print("Dfg computed in: " + str(self.dfgcalctime))
             print("Tree computed in: " + str(self.imdtime))
         return None
 

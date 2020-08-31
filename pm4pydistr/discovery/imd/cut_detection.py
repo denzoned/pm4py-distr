@@ -185,7 +185,7 @@ def detect_cut(initial_dfg, dfg, parent, conf, process, initial_start_activities
     Detect generally a cut in the graph (applying all the algorithms)
     """
     if dfg:
-        print('DFG' + str(dfg) + ' will be cut on ' + str(conf))
+        # print('DFG' + str(dfg) + ' will be cut on ' + str(conf))
         # print(dfg)
         # Find in order: xor, seq, par, loop, seq, flower
         ingoing = get_ingoing_edges(dfg)

@@ -5,7 +5,7 @@ import subprocess
 from collections import Counter
 
 from pm4py.algo.discovery.inductive.util.petri_el_count import Counts
-from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
+# from pm4py.algo.discovery.inductive.versions.dfg.util import get_tree_repr_dfg_based
 
 from pm4pydistr.configuration import PARAMETERS_PORT, PARAMETERS_HOST, PARAMETERS_MASTER_HOST, PARAMETERS_MASTER_PORT, \
     PARAMETERS_CONF, BASE_FOLDER_LIST_OPTIONS, PARAMETERS_AUTO_HOST, PARAMETERS_AUTO_PORT, SIZE_THRESHOLD
@@ -256,6 +256,7 @@ class Slave:
     def slave_distr(self, filename, parentfile, sendhost, sendport, local, process):
         folder = "parent_dfg"
         parentfilefolder = str(parentfile).split(".")[0]
+        SlaveVariableContainer.managed_dfgs.update({filename: "started"})
         if os.path.exists(os.path.join(self.conf, folder, "masterdfg.json")):
             init_dfg = self.clean_init_dfg(self.conf, folder)
             if local:
@@ -264,7 +265,7 @@ class Slave:
             if os.path.exists(os.path.join(self.conf, folder, filename)):
                 with open(os.path.join(self.conf, folder, filename), "r") as read_file:
                     data = json.load(read_file)
-                    print(data)
+                    # print(data)
                     clean_dfg = decode_json_dfg(data["dfg"])
                     # print(clean_dfg)
                     initial_start_activities = data["initial_start"]
@@ -288,16 +289,17 @@ class Slave:
                         # tree = get_tree_repr_dfg_based.get_repr(s, 0, False)
                         # tree = {"tree": str(tree)}
                         # print(str(filename) + " has the tree: " + str(tree))
-                        print(clean_dfg)
+                        # print(clean_dfg)
                         if clean_dfg:
                             tree = inductive_miner.apply_tree_dfg(clean_dfg)
                         else:
                             tree = {"flower": data["activities"]}
-                        print(tree)
+                        # print(tree)
                         SlaveVariableContainer.found_cuts.update({filename: {"cut": "tree", "sendhost": sendhost, "sendport": sendport, "parent": parentfile}})
                         SlaveVariableContainer.received_dfgs[filename] = tree
                         # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                         print("Saving subtree: " + str(filename))
+                        SlaveVariableContainer.managed_dfgs[filename] = "finished"
                         self.save_subtree("returned_trees", filename, str(tree), process, parentfile)
                         return tree
                     else:
@@ -316,8 +318,9 @@ class Slave:
                             # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                             # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                             print("Saving subtree: " + str(filename))
+                            SlaveVariableContainer.managed_dfgs[filename] = "finished"
                             self.save_subtree("returned_trees", filename, tree, process, parentfile)
-                            print(tree)
+                            # print(tree)
                             return tree
                         if cut == "base_xor":
                             tree = {"base": data["activities"]}
@@ -325,10 +328,14 @@ class Slave:
                             # parentfile = SlaveVariableContainer.found_cuts[filename]["parent"]
                             # self.send_result_tree(tree, filename, sendhost, sendport, parentfile, process)
                             print("Saving subtree: " + str(filename))
+                            SlaveVariableContainer.managed_dfgs[filename] = "finished"
                             self.save_subtree("returned_trees", filename, tree, process, parentfile)
-                            print(tree)
+                            # print(tree)
                             return tree
-        print(str(filename) + " not found")
+        print(str(filename) + " not found on " + str(self.conf))
+        print("Received_dfgs: " + str(SlaveVariableContainer.received_dfgs) + " on " + str(self.conf))
+        print("Send_dfgs: " + str(SlaveVariableContainer.send_dfgs) + " on " + str(self.conf))
+        SlaveVariableContainer.managed_dfgs[filename] = "finished"
         return None
 
     def send_child_dfgs(self, process, cut, parent):
@@ -362,13 +369,13 @@ class Slave:
             filename = str(s[0]).split("/")[4]
             print("Checking: " + str(fullfilepath) + " so file: " + str(filename))
             file_stats = os.stat(fullfilepath)
-            print("Slave list length: " + str(len(bestslave)))
+            # print("Slave list length: " + str(len(bestslave)))
             # Size Threshold for file in KiloByte, if below do not send or first best slave is itself
             send = False
             send_file = {filename: "send"}
             if len(bestslave) > (i+add):
                 if list(bestslave[i + add][1])[0] == self.conf or (file_stats.st_size / 1024) < SIZE_THRESHOLD:
-                    print("Filesize below threshold or best slave is itself")
+                    print("Filesize below threshold or best slave is itself for " + str(self.conf) + " " + str(filename))
                     self.slave_distr(filename, parentfolder, self.host, self.port, True, process)
                     send = True
                     send_file = {filename: "received"}
@@ -399,7 +406,7 @@ class Slave:
                             add = add + 1
             # In case all slaves are reserved, or more files than slaves, compute by itself
             if not send:
-                print("No other slaves left, computing by itself")
+                print("No other slaves left, computing by itself, slave_distr for " + str(filename) + " " + str(process))
                 if parentfolder not in os.listdir(SlaveVariableContainer.conf):
                     SlaveVariableContainer.slave.create_folder(parentfolder)
                 # SlaveVariableContainer.slave.load_dfg(folder, filename, json_content)
@@ -410,10 +417,11 @@ class Slave:
                 send_file = {filename: "received"}
             # parent_file = str(parentfolder) + ".json"
             SlaveVariableContainer.send_dfgs[process][parent].update(send_file)
+            SlaveVariableContainer.managed_dfgs[parent] = "finished"
             print("send dfgs: " + str(SlaveVariableContainer.send_dfgs))
         sendingtimeb = time.time()
         timetosend = sendingtimeb - sendingtime
-        print(timetosend)
+        print("Time to send all files " + str(timetosend))
 
     def ping_slaves(self, slave_list):
         i = 0
@@ -469,7 +477,7 @@ class Slave:
             d = SlaveVariableContainer.send_dfgs
             print(d)
             if not self.checkKey(d, process):
-                print("Slaveerror: Process " + process + " not found")
+                print("Slaveerror: Process " + process + " not found with " + str(d))
                 return None
             elif not self.checkKey(d[process], parentfile):
                 print("Slaveerror: Parent " + parentfile + " not found")
@@ -484,7 +492,11 @@ class Slave:
             host = SlaveVariableContainer.found_cuts[parentfile]["sendhost"]
             port = SlaveVariableContainer.found_cuts[parentfile]["sendport"]
             parentparent = SlaveVariableContainer.found_cuts[parentfile]["parent"]
+            print("Sending tree " + parentfile + " back for parent dfg: " + parentparent + " and child of child " + str(subtree_name))
             self.send_result_tree(tree, parentfile, host, port, parentparent, process)
+        else:
+            print("Not all subtrees received for " + str(parentfile))
+        return None
 
     def send_result_tree(self, tree, name, host, port, res_parent, process):
         treewithinfo = {}
@@ -492,8 +504,7 @@ class Slave:
         treewithinfo.update({"name": name})
         treewithinfo.update({"parent": res_parent})
         treewithinfo.update(({"process": process}))
-        print("Sending tree " + name + " back for parent dfg: " + res_parent)
-        print("Result tree: " + str(tree) + " will be send from " + str(self.conf))
+        print("Sending tree " + name + " back for parent dfg: " + res_parent + " from " + str(self.conf))
         # print("host" + host)
         # print("port" + port)
         m = PostResultTree(self, self.conf, host, port, treewithinfo)
@@ -506,21 +517,40 @@ class Slave:
             return False
 
     def check_tree(self, process, parent):
-        d = SlaveVariableContainer.send_dfgs
-        print(d)
-        b = True
-        if self.checkKey(d, process):
-            if self.checkKey(d[process], parent):
-                for s in list(d[process][parent]):
-                    if d[process][parent][s] == "send":
-                        b = False
-                        print(str(s) + " not received yet on " + str(self.conf) + ". Send to ")
-        # if SlaveVariableContainer.received_dfgs[parent] == "found":
-        #     print("No tree found yet for " + parent)
-        #     b = False
-        if b:
-            print("All subtrees found for " + parent)
-            SlaveVariableContainer.received_dfgs[parent] = "found"
+        b = False
+        print(SlaveVariableContainer.managed_dfgs)
+        if self.checkKey(SlaveVariableContainer.managed_dfgs, parent):
+            print("Check_tree 1 done")
+            if SlaveVariableContainer.managed_dfgs[parent] == "finished":
+                d = SlaveVariableContainer.send_dfgs
+                print("Check_tree 2 done and " + str(d))
+                # if self.checkKey(d, process):
+                #     if self.checkKey(d[process], parent):
+                #         b = True
+                #         for s in list(d[process][parent]):
+                #             if d[process][parent][s] == "send":
+                #                 b = False
+                #                 print(str(s) + " not received yet on " + str(self.conf) + ".")
+                # if SlaveVariableContainer.received_dfgs[parent] == "found":
+                #     print("No tree found yet for " + parent)
+                #     b = False
+                if "child_dfg" in os.listdir(self.conf) and "returned_trees" in os.listdir(self.conf):
+                    print("Check_tree 3 done")
+                    if process in os.listdir(os.path.join(self.conf, "child_dfg")):
+                        parentfolder = str(parent).split(".")[0]
+                        print("Check_tree 4 done parent is " + str(parentfolder))
+                        if parentfolder in os.listdir(os.path.join(self.conf, "child_dfg", process)):
+                            print("Check_tree 5 done")
+                            b = True
+                            for index, filename in enumerate(os.listdir(os.path.join(self.conf, "child_dfg", process, parentfolder))):
+                                if filename not in os.listdir(os.path.join(self.conf, "returned_trees")):
+                                    b = False
+                                    print(str(filename) + " not received yet")
+                if b:
+                    print("All subtrees found for " + parent)
+                    SlaveVariableContainer.received_dfgs[parent] = "found"
+        else:
+            print("Filecut for " + str(parent) + " not finished or not found")
         return b
 
     def result_tree(self, process, parent):
@@ -532,19 +562,20 @@ class Slave:
                 #     subtree = json.load(read_file)
                     # print(subtree)
                 subtree = []
-                try:
-                    for line in open(os.path.join(self.conf, "returned_trees", filename), 'r'):
-                        subtree.append(json.loads(line))
-                except ValueError:
-                    print("JSON ParseError for file " + str(filename) + " at " + str(self.conf))
-                # print("Tree before: " + str(tree))
-                # print(SlaveVariableContainer.found_cuts[parentfile])
-                # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
-                # print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
-                dictkey = re.findall(r'\d+', filename)[-1]
-                # print(dictkey)
-                tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
-                # print("Tree after: " + str(tree))
+                if filename in os.listdir(os.path.join(self.conf, "child_dfg", process, parent)):
+                    try:
+                        for line in open(os.path.join(self.conf, "returned_trees", filename), 'r'):
+                            subtree.append(json.loads(line))
+                    except ValueError:
+                        print("JSON ParseError for file " + str(filename) + " at " + str(self.conf))
+                    # print("Tree before: " + str(tree))
+                    # print(SlaveVariableContainer.found_cuts[parentfile])
+                    # tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]] = subtree
+                    # print("Subtree for" + str(self.conf) + " is " + str(subtree) + " in file" + str(filename))
+                    dictkey = re.findall(r'\d+', filename)[-1]
+                    # print(dictkey)
+                    tree[SlaveVariableContainer.found_cuts[parentfile]["cut"]].update({dictkey: subtree})
+                    # print("Tree after: " + str(tree))
             return tree
         return "No tree"
 
