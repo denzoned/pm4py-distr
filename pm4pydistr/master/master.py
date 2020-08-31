@@ -1314,3 +1314,10 @@ class Master:
             #     if MasterVariableContainer.reserved_slaves[s] == 2:
             #         MasterVariableContainer.reserved_slaves[s] = 0
         return None
+
+    def set_multiplier(self, ram, cpu, disk, k):
+        MasterVariableContainer.ram_multiplier = ram
+        MasterVariableContainer.cpu_multiplier = cpu
+        MasterVariableContainer.disk_multiplier = disk
+        MasterVariableContainer.k_slope = k
+        return None

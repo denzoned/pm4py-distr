@@ -1098,6 +1098,27 @@ def resall_fct():
                 return jsonify({"Resource Allocation Function": resource})
     return jsonify({"Error": {}})
 
+@MasterSocketListener.app.route("/setResMultiplier", methods=["GET"])
+def set_multiplier():
+    keyphrase = request.args.get('keyphrase', type=str)
+    process = request.args.get('process', type=str)
+    session = request.args.get('session', type=str)
+    attribute_key = request.args.get('attribute_key', type=str, default=xes.DEFAULT_NAME_KEY)
+    cpu = request.args.get('cpu', type=float)
+    ram = request.args.get('ram', type=float)
+    disk = request.args.get('disk', type=float)
+    k = request.args.get('k', type=float)
+
+    if keyphrase == configuration.KEYPHRASE:
+        if type(cpu) == float and type(ram) == float and type(disk) == float:
+            if type(k) == float or type(k) == int:
+                resource = MasterVariableContainer.master.set_multiplier(ram, cpu, disk, k)
+                return jsonify({"Multipliers": "set"})
+            else:
+                resource = MasterVariableContainer.master.set_multiplier(ram, cpu, disk, configuration.DEFAULT_K)
+                return jsonify({"Multipliers": "set"})
+    return jsonify({"Error": {}})
+
 
 @MasterSocketListener.app.route("/sendRes", methods=["GET", "POST"])
 def send_res():
