@@ -1122,6 +1122,7 @@ class Master:
                     print("JSON ParseError for file " + str(filename) + " at Master")
             print("Master found tree ")
             return tree
+        print("Master found no tree")
         return "No tree"
 
     def save_subtree(self, folder_name, subtree_name, subtree, process):
