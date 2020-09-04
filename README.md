@@ -8,6 +8,44 @@ just run "python main.py"
 
 The example contains the partitioned version of the logs "receipt" and "roadtraffic".
 
+## Experiment 0 for the thesis
+Computation time of a Process Tree from a DFG:
+
+0. Change the host address in main.py, main2.py and main3.py to the address where main.py will be run on.
+Other addresses will be automatically idnetified by the engine.
+1. Run python3 main.py, python3 main2.py and python3 main3.py each on one node
+in that order.
+2. Call the HTTP request http://137.226.117.71:5001/initialize?keyphrase=hello&process=receipt&doall=1&clean=1
+
+You can select process receipt or roadtraffic
+
+## Experiment 1 for the thesis
+
+0. Change the host address in main.py, main2.py and main3.py to the address where main.py will be run on.
+Other addresses will be automatically idnetified by the engine.
+1. Run python3 main.py, python3 main2.py and python3 main3.py each on one node
+in that order.
+
+2. Call the HTTP request http://137.226.117.71:5001/initialize?keyphrase=hello&process=test1&doall=1&clean=1
+
+3. If we want to set the resource value multipliers call http://137.226.117.71:5001/setResMultiplier?keyphrase=hello&cpu=1&ram=1&disk=1&k=100
+
+4. If we have need an artificial DFG call http://137.226.117.71:5001/createDFG?keyphrase=hello&dfgname=test1
+
+5. Call the HTTP request http://137.226.117.71:5001/distributedIMD?keyphrase=hello&process=test1&created=1
+
+6. Results can be seen on http://137.226.117.71:5001/resultIMD?keyphrase=hello&process=test1
+
+
+
+
+
+
+
+
+
+
+
 ## Easy setup after running python main.py
 
 1. Run everything needed for Inductive Miner directly-follows based with following call.

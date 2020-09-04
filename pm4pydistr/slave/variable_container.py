@@ -14,4 +14,4 @@ class SlaveVariableContainer:
     managed_logs = {}
     managed_dfgs = {}
     bandwidth = 800000
-    network_multiplier = 1
+    network_multiplier = 100
