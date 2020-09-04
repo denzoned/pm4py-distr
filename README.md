@@ -8,7 +8,7 @@ just run "python main.py"
 
 The example contains the partitioned version of the logs "receipt" and "roadtraffic".
 
-## Experiment 0 for the thesis
+## Experiment one for the thesis
 Computation time of a Process Tree from a DFG:
 
 0. Change the host address in main.py, main2.py and main3.py to the address where main.py will be run on.
@@ -19,7 +19,7 @@ in that order.
 
 You can select process receipt or roadtraffic
 
-## Experiment 1 for the thesis
+## Experiment two for the thesis
 
 0. Change the host address in main.py, main2.py and main3.py to the address where main.py will be run on.
 Other addresses will be automatically idnetified by the engine.
